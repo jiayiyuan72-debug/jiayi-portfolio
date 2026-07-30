@@ -20,8 +20,7 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = [
-    { href: '/admin/sections', label: '板块管理', icon: '📋' },
-    { href: '/admin/content', label: '内容管理', icon: '📝' },
+    { href: '/admin/editor', label: '网站编辑', icon: '🎨' },
     { href: '/admin/messages', label: '访客留言', icon: '💬' },
     { href: '/admin/settings', label: '站点设置', icon: '⚙️' },
   ];
