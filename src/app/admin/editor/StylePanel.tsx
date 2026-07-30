@@ -143,20 +143,21 @@ export default function StylePanel({ section, onChange }: Props) {
             { key: 'show_mood', label: '显示心情', defaultVal: false },
             { key: 'show_border', label: '显示边框', defaultVal: true },
             { key: 'show_captions', label: '显示说明文字', defaultVal: false },
-          ].map(opt => (
-            <div key={opt.key} className="flex items-center justify-between">
-              <span className="text-sm text-[#2d2a24]">{opt.label}</span>
-              <button
-                onClick={() => updateStyle(opt.key, !(style as any)[opt.key] ?? opt.defaultVal)}
-                className={`w-9 h-5 rounded-full transition-colors ${
-                  (style as any)[opt.key] ?? opt.defaultVal ? 'bg-[#2d2a24]' : 'bg-[#e8e4de]'
-                } relative`}
-              >
-                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                  (style as any)[opt.key] ?? opt.defaultVal ? 'translate-x-4.5' : 'translate-x-0.5'
-                }`} />
-              </button>
-            </div>
+          ].map(opt => {
+            const currentVal = (style as any)[opt.key];
+            const val = currentVal !== undefined ? currentVal : opt.defaultVal;
+            return (
+              <div key={opt.key} className="flex items-center justify-between">
+                <span className="text-sm text-[#2d2a24]">{opt.label}</span>
+                <button
+                  onClick={() => updateStyle(opt.key, !val)}
+                  className={`w-9 h-5 rounded-full transition-colors ${val ? 'bg-[#2d2a24]' : 'bg-[#e8e4de]'} relative`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${val ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+              );
+            })}
           ))}
         </div>
       </div>
