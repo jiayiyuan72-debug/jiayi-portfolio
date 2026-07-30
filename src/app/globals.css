@@ -1,26 +1,139 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: #faf7f2;
+  --color-foreground: #2d2a24;
+  --color-accent: #d4a574;
+  --color-accent-light: #e8c4a0;
+  --color-muted: #8b8b8b;
+  --color-border: #e8e4de;
+  --color-card: #ffffff;
+  --color-card-hover: #f8f5f0;
+  --font-sans: "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* 基础样式 */
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d0ca;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b8b4ae;
+}
+
+/* 选中文本 */
+::selection {
+  background: #d4a57440;
+  color: #2d2a24;
+}
+
+/* 过渡动画 */
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 时间轴线 */
+.timeline-line {
+  position: relative;
+}
+
+.timeline-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e8e4de;
+}
+
+/* 管理员标记 */
+.admin-only {
+  position: relative;
+}
+
+/* 卡片悬浮效果 */
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+/* 入口页动画 */
+.entry-enter {
+  opacity: 0;
+  animation: entryFadeIn 1s ease-out forwards;
+}
+
+.entry-enter:nth-child(1) { animation-delay: 0.2s; }
+.entry-enter:nth-child(2) { animation-delay: 0.5s; }
+.entry-enter:nth-child(3) { animation-delay: 0.8s; }
+.entry-enter:nth-child(4) { animation-delay: 1.1s; }
+
+@keyframes entryFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 文章内容样式 */
+.prose {
+  max-width: 65ch;
+  line-height: 1.8;
+}
+
+.prose p {
+  margin-bottom: 1em;
+}
+
+.prose h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+/* 后台表格 */
+.admin-table th {
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: #8b8b8b;
 }
