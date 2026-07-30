@@ -154,11 +154,10 @@ export default function StylePanel({ section, onChange }: Props) {
                   className={`w-9 h-5 rounded-full transition-colors ${val ? 'bg-[#2d2a24]' : 'bg-[#e8e4de]'} relative`}
                 >
                   <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${val ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
-                  </button>
-                </div>
-              );
-            })}
-          ))}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
