@@ -21,6 +21,7 @@ export default function AdminLayout({
 
   const navItems = [
     { href: '/admin/editor', label: '网站编辑', icon: '🎨' },
+    { href: '/admin/import', label: '智能导入', icon: '🤖' },
     { href: '/admin/messages', label: '访客留言', icon: '💬' },
     { href: '/admin/settings', label: '站点设置', icon: '⚙️' },
   ];
