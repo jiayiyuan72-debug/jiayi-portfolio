@@ -3,29 +3,31 @@ import { Section, ContentItem } from '@/types';
 import VisitorNav from '@/components/visitor/VisitorNav';
 import SectionRenderer from '@/components/visitor/SectionRenderer';
 
-export const dynamic = 'force-dynamic';
+// 使用 ISR 每 60 秒重新生成，提升加载速度
+export const revalidate = 60;
 
 export default async function PortfolioPage() {
-  // 获取所有可见板块
-  const { data: sections } = await supabaseAdmin
-    .from('sections')
-    .select('*')
-    .eq('is_visible', true)
-    .order('sort_order');
+  // 并行获取所有数据
+  const [sectionsResult, contentResult] = await Promise.all([
+    supabaseAdmin
+      .from('sections')
+      .select('*')
+      .eq('is_visible', true)
+      .order('sort_order'),
+    supabaseAdmin
+      .from('content_items')
+      .select('*')
+      .eq('is_visible', true)
+      .eq('status', 'published')
+      .order('sort_order'),
+  ]);
 
-  // 获取所有板块的已发布可见内容
-  const sectionIds = sections?.map(s => s.id) ?? [];
-  const { data: allContent } = await supabaseAdmin
-    .from('content_items')
-    .select('*')
-    .in('section_id', sectionIds)
-    .eq('is_visible', true)
-    .eq('status', 'published')
-    .order('sort_order');
+  const sections = sectionsResult.data || [];
+  const allContent = contentResult.data || [];
 
   // 按 section_id 分组
   const contentBySection: Record<string, ContentItem[]> = {};
-  allContent?.forEach(item => {
+  allContent.forEach(item => {
     if (!contentBySection[item.section_id]) {
       contentBySection[item.section_id] = [];
     }
