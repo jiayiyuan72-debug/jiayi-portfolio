@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Toaster, toast } from 'react-hot-toast';
 import { Section } from '@/types/section';
@@ -17,6 +17,14 @@ import CardSectionEditor from './editors/CardSectionEditor';
 import GallerySectionEditor from './editors/GallerySectionEditor';
 
 export default function EditorPage() {
+  return (
+    <Suspense fallback={<div className="text-[#d4a574] p-4">加载中...</div>}>
+      <EditorPageInner />
+    </Suspense>
+  );
+}
+
+function EditorPageInner() {
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section'); // slug
   const [sections, setSections] = useState<Section[]>([]);
