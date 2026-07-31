@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Toaster, toast } from 'react-hot-toast';
 import { Section } from '@/types/section';
 import { ContentItem } from '@/types/content';
@@ -16,6 +17,8 @@ import CardSectionEditor from './editors/CardSectionEditor';
 import GallerySectionEditor from './editors/GallerySectionEditor';
 
 export default function EditorPage() {
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams?.get('section'); // slug
   const [sections, setSections] = useState<Section[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
@@ -42,8 +45,16 @@ export default function EditorPage() {
       setSections(sectionsData || []);
       setContentItems(contentData || []);
 
-      // 默认选中第一个板块
-      if (sectionsData?.length > 0 && !selectedSectionId) {
+      // 支持 ?section=slug 参数：从 URL 选中对应板块
+      if (sectionParam && sectionsData?.length > 0) {
+        const target = sectionsData.find((s: Section) => s.slug === sectionParam);
+        if (target) {
+          setSelectedSectionId(target.id);
+        } else if (!selectedSectionId) {
+          setSelectedSectionId(sectionsData[0].id);
+        }
+      } else if (sectionsData?.length > 0 && !selectedSectionId) {
+        // 默认选中第一个板块
         setSelectedSectionId(sectionsData[0].id);
       }
     } catch {

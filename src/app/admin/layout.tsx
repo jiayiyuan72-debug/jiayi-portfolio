@@ -87,7 +87,7 @@ export default function AdminLayout({
 
         <div className="p-4 border-t border-[#e8e4de] space-y-2">
           <Link
-            href="/portfolio"
+            href="/portfolio?preview=admin"
             className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-[#5a5349] hover:bg-[#f8f5f0] transition-colors"
           >
             <span>👁️</span>

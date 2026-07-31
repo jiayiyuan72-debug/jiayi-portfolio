@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { Section, ContentItem } from '@/types';
 import VisitorNav from '@/components/visitor/VisitorNav';
 import SectionRenderer from '@/components/visitor/SectionRenderer';
+import PortfolioWrapper from '@/components/visitor/PortfolioWrapper';
 
 // 使用 ISR 每 60 秒重新生成，提升加载速度
 export const revalidate = 60;
@@ -58,6 +59,9 @@ export default async function PortfolioPage() {
       <footer className="border-t border-[#e8e4de] py-8 text-center text-xs text-[#b8b4ae]">
         © 2026 Jiayi
       </footer>
+
+      {/* 管理员悬浮按钮：登录状态下显示"返回后台" */}
+      <PortfolioWrapper sections={(sections as Section[]) || []} />
     </div>
   );
 }
