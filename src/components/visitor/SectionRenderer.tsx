@@ -6,6 +6,7 @@ import ArticleRenderer from './content-renderers/ArticleRenderer';
 import TravelogueRenderer from './content-renderers/TravelogueRenderer';
 import DiaryRenderer from './content-renderers/DiaryRenderer';
 import MixedRenderer from './content-renderers/MixedRenderer';
+import GridRenderer from './GridRenderer';
 
 interface Props {
   section: Section;
@@ -39,6 +40,9 @@ export default function SectionRenderer({ section, contentItems }: Props) {
 
   const style = section.style_config || {};
 
+  // 可视化画布：若板块有任一内容项带了 fields.layout，则按 12 列网格渲染
+  const hasGridLayout = contentItems.some(i => i.fields && i.fields.layout);
+
   return (
     <section
       id={section.slug}
@@ -62,7 +66,11 @@ export default function SectionRenderer({ section, contentItems }: Props) {
           )}
         </div>
 
-        <Renderer section={section} contentItems={contentItems} />
+        {hasGridLayout ? (
+          <GridRenderer section={section} contentItems={contentItems} />
+        ) : (
+          <Renderer section={section} contentItems={contentItems} />
+        )}
       </div>
     </section>
   );

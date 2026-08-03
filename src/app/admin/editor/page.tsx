@@ -15,6 +15,8 @@ import DiarySectionEditor from './editors/DiarySectionEditor';
 import ArticleSectionEditor from './editors/ArticleSectionEditor';
 import CardSectionEditor from './editors/CardSectionEditor';
 import GallerySectionEditor from './editors/GallerySectionEditor';
+import CanvasEditor from './canvas/CanvasEditor';
+import { GridLayout } from '@/types/content';
 
 export default function EditorPage() {
   return (
@@ -34,6 +36,7 @@ function EditorPageInner() {
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [editorMode, setEditorMode] = useState<'form' | 'canvas'>('form');
 
   const selectedSection = sections.find(s => s.id === selectedSectionId) || null;
 
@@ -179,6 +182,41 @@ function EditorPageInner() {
     }).catch(() => loadData());
   };
 
+  // 画布模式：拖拽换位（更新 sort_order）
+  const handleCanvasReorder = (reordered: ContentItem[]) => {
+    setContentItems(prev => {
+      const map = new Map(reordered.map(i => [i.id, i]));
+      return prev.map(i => map.get(i.id) || i);
+    });
+    // 持久化每个块的 sort_order
+    reordered.forEach(item => {
+      if (item.sort_order !== undefined) {
+        fetch(`/api/content/${item.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sort_order: item.sort_order }),
+        });
+      }
+    });
+  };
+
+  // 画布模式：块的布局（col_span）变化 —— 防抖保存
+  const handleCanvasLayoutChange = (id: string, layout: GridLayout) => {
+    setContentItems(prev =>
+      prev.map(c => (c.id === id ? { ...c, fields: { ...c.fields, layout } } : c))
+    );
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    const timer = setTimeout(() => {
+      saveContentItem(id, { fields: { ...contentItems.find(c => c.id === id)?.fields, layout } })
+        .then(ok => { if (ok) toast.success('画布布局已保存'); });
+    }, 2000);
+    setAutoSaveTimer(timer);
+  };
+
+  const handleCanvasEdit = () => {
+    setEditorMode('form');
+  };
+
   const renderSectionEditor = () => {
     if (!selectedSection) {
       return (
@@ -189,6 +227,19 @@ function EditorPageInner() {
     }
 
     const items = getSectionContent(selectedSection.id);
+
+    // 画布模式：可视化排版（拖拽换位 + 宽度缩放 + 智能排列）
+    if (editorMode === 'canvas') {
+      return (
+        <CanvasEditor
+          section={{ id: selectedSection.id, layout_type: selectedSection.layout_type }}
+          contentItems={items}
+          onReorder={handleCanvasReorder}
+          onLayoutChange={handleCanvasLayoutChange}
+          onEdit={handleCanvasEdit}
+        />
+      );
+    }
 
     switch (selectedSection.layout_type) {
       case 'card':
@@ -320,6 +371,25 @@ function EditorPageInner() {
                 {selectedSection.name}
               </h1>
               <div className="flex items-center gap-3 text-xs text-[#8b8b8b]">
+                {/* 编辑模式切换 */}
+                <div className="flex items-center gap-1 bg-[#f8f5f0] border border-[#e8e4de] rounded-lg p-0.5">
+                  <button
+                    onClick={() => setEditorMode('form')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      editorMode === 'form' ? 'bg-[#2d2a24] text-white' : 'text-[#5a5349]'
+                    }`}
+                  >
+                    表单
+                  </button>
+                  <button
+                    onClick={() => setEditorMode('canvas')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      editorMode === 'canvas' ? 'bg-[#d4a574] text-white' : 'text-[#5a5349]'
+                    }`}
+                  >
+                    🖼️ 画布
+                  </button>
+                </div>
                 {saving && <span>保存中...</span>}
                 <span>{getSectionContent(selectedSection.id).length} 条内容</span>
               </div>
