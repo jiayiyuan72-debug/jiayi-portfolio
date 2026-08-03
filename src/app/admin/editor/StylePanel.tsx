@@ -27,11 +27,19 @@ export default function StylePanel({ section, onChange }: Props) {
   }
 
   const style = section.style_config || {};
+  const page = style.page || {};
 
   const updateStyle = (key: string, value: any) => {
     onChange({
       ...section,
       style_config: { ...style, [key]: value },
+    });
+  };
+
+  const changePage = (key: string, value: any) => {
+    onChange({
+      ...section,
+      style_config: { ...style, page: { ...page, [key]: value } },
     });
   };
 
@@ -67,6 +75,52 @@ export default function StylePanel({ section, onChange }: Props) {
               section.is_visible ? 'translate-x-5.5' : 'translate-x-0.5'
             }`} />
           </button>
+        </div>
+
+        {/* 页面配置（多页面独立页） */}
+        <div className="pt-2 space-y-4 border-t border-[#e8e4de]">
+          <h4 className="text-xs font-medium text-[#8b8b8b]">独立页配置</h4>
+
+          {/* 是否显示在导航 */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-[#2d2a24]">显示在导航</span>
+            <button
+              onClick={() => changePage('show_in_nav', !(page.show_in_nav ?? true))}
+              className={`w-11 h-6 rounded-full transition-colors ${
+                (page.show_in_nav ?? true) ? 'bg-[#2d2a24]' : 'bg-[#e8e4de]'
+              } relative`}
+            >
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                (page.show_in_nav ?? true) ? 'translate-x-5.5' : 'translate-x-0.5'
+              }`} />
+            </button>
+          </div>
+
+          {/* 副标题 */}
+          <div>
+            <label className="block text-xs text-[#8b8b8b] mb-1">页面副标题</label>
+            <input
+              type="text"
+              value={page.subtitle || ''}
+              onChange={e => changePage('subtitle', e.target.value)}
+              placeholder="例如：记录成长的每一刻"
+              className="w-full px-3 py-2 border border-[#e8e4de] rounded-lg text-sm
+                         focus:outline-none focus:ring-2 focus:ring-[#d4a574]/30"
+            />
+          </div>
+
+          {/* 封面图 URL */}
+          <div>
+            <label className="block text-xs text-[#8b8b8b] mb-1">首页卡片封面图 URL</label>
+            <input
+              type="text"
+              value={page.cover_image || ''}
+              onChange={e => changePage('cover_image', e.target.value)}
+              placeholder="https://... 上传后的图片地址（可选）"
+              className="w-full px-3 py-2 border border-[#e8e4de] rounded-lg text-sm
+                         focus:outline-none focus:ring-2 focus:ring-[#d4a574]/30"
+            />
+          </div>
         </div>
 
         {/* 布局类型 */}

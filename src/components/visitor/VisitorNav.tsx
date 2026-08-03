@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Section } from '@/types/section';
 
 interface Props {
@@ -9,32 +11,39 @@ interface Props {
 
 export default function VisitorNav({ sections }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
 
-  const handleClick = (slug: string) => {
-    const el = document.getElementById(slug);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  // 只显示配置了"在导航显示"的板块（默认显示）
+  const navSections = sections.filter(s => (s.style_config?.page?.show_in_nav ?? true));
+
+  const isActive = (href: string) => pathname === href;
+
+  const linkClass = (href: string) =>
+    `text-sm transition-colors hover:text-[#2d2a24] ${
+      isActive(href) ? 'text-[#2d2a24] font-medium' : 'text-[#8b8b8b]'
+    }`;
 
   return (
     <nav className="sticky top-0 z-40 bg-[#faf7f2]/90 backdrop-blur-md border-b border-[#e8e4de]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-14">
-          <span className="text-sm font-medium text-[#2d2a24] tracking-wider">
+          <Link href="/" className="text-sm font-medium text-[#2d2a24] tracking-wider hover:opacity-70">
             Jiayi
-          </span>
+          </Link>
 
           {/* 桌面端导航 */}
           <div className="hidden md:flex items-center gap-6">
-            {sections.map(section => (
-              <button
+            <Link href="/" className={linkClass('/')}>
+              首页
+            </Link>
+            {navSections.map(section => (
+              <Link
                 key={section.id}
-                onClick={() => handleClick(section.slug)}
-                className="text-sm text-[#8b8b8b] hover:text-[#2d2a24] transition-colors"
+                href={`/${section.slug}`}
+                className={linkClass(`/${section.slug}`)}
               >
                 {section.name}
-              </button>
+              </Link>
             ))}
           </div>
 
@@ -53,17 +62,22 @@ export default function VisitorNav({ sections }: Props) {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setMobileOpen(false)} />
                 <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-[#e8e4de] py-2 z-20">
-                  {sections.map(section => (
-                    <button
+                  <Link
+                    href="/"
+                    onClick={() => setMobileOpen(false)}
+                    className="block w-full px-4 py-2 text-sm text-[#2d2a24] hover:bg-[#f8f5f0] transition-colors"
+                  >
+                    首页
+                  </Link>
+                  {navSections.map(section => (
+                    <Link
                       key={section.id}
-                      onClick={() => {
-                        handleClick(section.slug);
-                        setMobileOpen(false);
-                      }}
-                      className="block w-full text-left px-4 py-2 text-sm text-[#2d2a24] hover:bg-[#f8f5f0] transition-colors"
+                      href={`/${section.slug}`}
+                      onClick={() => setMobileOpen(false)}
+                      className="block w-full px-4 py-2 text-sm text-[#2d2a24] hover:bg-[#f8f5f0] transition-colors"
                     >
                       {section.name}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </>

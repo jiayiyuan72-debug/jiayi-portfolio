@@ -30,6 +30,14 @@ export type FieldType =
   | 'rich_text'
   | 'boolean';
 
+export interface PageConfig {
+  show_in_nav?: boolean;
+  subtitle?: string;
+  cover_image?: string;
+  page_meta_title?: string;
+  page_meta_description?: string;
+}
+
 export interface StyleConfig {
   bg_color?: string;
   text_color?: string;
@@ -51,6 +59,8 @@ export interface StyleConfig {
   layout?: string;
   font_family?: string;
   animation?: string;
+  /** 多页面结构下的板块独立页配置 */
+  page?: PageConfig;
 }
 
 export interface Section {
