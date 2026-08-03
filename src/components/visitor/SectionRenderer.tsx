@@ -8,6 +8,7 @@ import DiaryRenderer from './content-renderers/DiaryRenderer';
 import MixedRenderer from './content-renderers/MixedRenderer';
 import GridRenderer from './GridRenderer';
 import PageLayoutRenderer from './PageLayoutRenderer';
+import CanvasRenderer from './CanvasRenderer';
 
 interface Props {
   section: Section;
@@ -41,6 +42,8 @@ export default function SectionRenderer({ section, contentItems }: Props) {
 
   const style = section.style_config || {};
 
+  // 画板容器编辑器：板块内内容项带 fields.canvas_data（树形数组）时，优先用 CanvasRenderer
+  const canvasData = contentItems.find(i => i.fields?.canvas_data)?.fields.canvas_data;
   // 自由布局：板块内有内容项带 fields.page_layout 时，按 JSON 渲染整页
   const freeLayout = contentItems.find(i => i.fields?.page_layout)?.fields.page_layout;
   // 可视化画布：若板块有任一内容项带了 fields.layout，则按 12 列网格渲染
@@ -69,7 +72,9 @@ export default function SectionRenderer({ section, contentItems }: Props) {
           )}
         </div>
 
-        {freeLayout ? (
+        {canvasData ? (
+          <CanvasRenderer nodes={canvasData} />
+        ) : freeLayout ? (
           <PageLayoutRenderer layout={freeLayout} />
         ) : hasGridLayout ? (
           <GridRenderer section={section} contentItems={contentItems} />

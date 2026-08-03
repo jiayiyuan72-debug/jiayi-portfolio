@@ -17,6 +17,7 @@ import CardSectionEditor from './editors/CardSectionEditor';
 import GallerySectionEditor from './editors/GallerySectionEditor';
 import CanvasEditor from './canvas/CanvasEditor';
 import PageBuilder from '@/components/admin/builder/PageBuilder';
+import BoardEditor from '@/components/admin/canvas-editor/CanvasEditor';
 import { GridLayout } from '@/types/content';
 
 export default function EditorPage() {
@@ -37,7 +38,7 @@ function EditorPageInner() {
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [editorMode, setEditorMode] = useState<'form' | 'canvas' | 'free'>('form');
+  const [editorMode, setEditorMode] = useState<'form' | 'canvas' | 'free' | 'board'>('form');
 
   const selectedSection = sections.find(s => s.id === selectedSectionId) || null;
 
@@ -235,6 +236,21 @@ function EditorPageInner() {
       .then(ok => ok && toast.success('布局已保存'));
   };
 
+  // 画板模式：读/写 canvas_data（树形数组）
+  const getCanvasData = (): any[] => {
+    const items = getSectionContent(selectedSectionId || '');
+    const holder = items.find(i => i.fields?.canvas_data) || items[0];
+    return holder?.fields?.canvas_data || [];
+  };
+  const saveCanvasData = (trees: any[]) => {
+    if (!selectedSectionId) return;
+    const items = getSectionContent(selectedSectionId);
+    const holder = items.find(i => i.fields?.canvas_data) || items[0];
+    if (!holder) return;
+    saveContentItem(holder.id, { fields: { ...holder.fields, canvas_data: trees } })
+      .then(ok => ok && toast.success('画板已保存'));
+  };
+
   const renderSectionEditor = () => {
     if (!selectedSection) {
       return (
@@ -254,6 +270,20 @@ function EditorPageInner() {
             key={selectedSection.id}
             layout={getFreeLayout()}
             onSave={saveFreeLayout}
+            onExit={() => setEditorMode('form')}
+          />
+        </div>
+      );
+    }
+
+    // 画板模式：canvas_data 树形容器编辑器
+    if (editorMode === 'board') {
+      return (
+        <div className="h-[calc(100vh-12rem)]">
+          <BoardEditor
+            key={selectedSection.id}
+            trees={getCanvasData()}
+            onSave={saveCanvasData}
             onExit={() => setEditorMode('form')}
           />
         </div>
@@ -428,6 +458,14 @@ function EditorPageInner() {
                     }`}
                   >
                     🧩 自由布局
+                  </button>
+                  <button
+                    onClick={() => setEditorMode('board')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      editorMode === 'board' ? 'bg-[#4a90e2] text-white' : 'text-[#5a5349]'
+                    }`}
+                  >
+                    🎨 画板
                   </button>
                 </div>
                 {saving && <span>保存中...</span>}
