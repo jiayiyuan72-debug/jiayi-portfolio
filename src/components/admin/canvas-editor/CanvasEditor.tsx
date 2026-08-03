@@ -71,12 +71,10 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
 
   // ---- 拖放创建：优先指针式（可靠），HTML5 作兜底 ----
   const dragTypeRef = useRef<CanvasType | null>(null);
-  const startPointRef = useRef<{ x: number; y: number } | null>(null);
 
   const onPointerStart = (type: CanvasType) => (e: React.PointerEvent) => {
     e.preventDefault();
     dragTypeRef.current = type;
-    startPointRef.current = { x: e.clientX, y: e.clientY };
     const move = (ev: PointerEvent) => {
       // 跟踪，可加 ghost 指示（此处最小实现：进入画板即高亮）
     };
@@ -92,17 +90,17 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
   const endPointerDrag = (e: PointerEvent) => {
     const type = dragTypeRef.current;
     dragTypeRef.current = null;
-    if (!type || !startPointRef.current) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    startPointRef.current = null;
-    // 松手时鼠标是否在画板内
-    if (!rect) return;
-    const inside = e.clientX >= rect.left - 8 && e.clientX <= rect.right + 8 && e.clientY >= rect.top - 8 && e.clientY <= rect.bottom + 8;
-    if (!inside) return;
+    if (!type) return;
     const node = defaultCanvasNode(type);
+    // 单击组件或拖到画板附近 → 追加到根级（点击/拖拽都能添加）
     setTree([...trees, node]);
     setSelectedId(node.id);
     if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
+  };
+
+  // 缩放手柄更新节点宽高
+  const onResizeNode = (id: string, patch: { width?: string; height?: string }) => {
+    setTree(mapTree(trees, n => n.id === id ? { ...n, props: { ...n.props, ...patch } } : n));
   };
 
   // HTML5 兜底
@@ -259,6 +257,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
                 onMoveOrder={(d) => moveOrder(n.id, d)}
                 onPickImage={pickImage}
                 onPickGallery={pickImage}
+                onResize={onResizeNode}
               />
             ))}
           </div>

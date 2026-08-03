@@ -399,7 +399,9 @@ function EditorPageInner() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] -m-4 sm:-m-6 lg:-m-8 overflow-hidden">
+    // 移除负边距与 overflow-hidden：负边距会把中间内容区( flex-1)挤到板块列表区域并被裁剪，
+    // 导致画板编辑器宽度塌陷成 ~32px（见 container-editor v2 需求诊断）。改用内部 padding 控制间距。
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       <Toaster position="top-center" />
 
       {/* 左侧：板块列表 */}
@@ -425,8 +427,8 @@ function EditorPageInner() {
       />
 
       {/* 中间：编辑器区域 */}
-      <div className="flex-1 overflow-y-auto bg-[#f5f5f0]">
-        <div className="max-w-4xl mx-auto p-6">
+      <div className="flex-1 min-w-0 overflow-y-auto bg-[#f5f5f0]">
+        <div className={`${editorMode === 'board' ? 'p-0 min-w-0' : 'max-w-4xl mx-auto p-6 min-w-0'}`}>
           {selectedSection && (
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-xl font-bold text-[#2d2a24]">

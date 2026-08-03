@@ -17,12 +17,13 @@ interface Props {
   onMoveOrder: (dir: -1 | 1) => void;
   onPickImage: (id: string) => void;
   onPickGallery: (id: string) => void;
+  onResize: (id: string, patch: { width?: string; height?: string }) => void;
 }
 
 const EDITABLE_TYPES = ['text', 'quote'];
 
 /** 单个容器节点：递归渲染；单击选中、双击编辑/传图；编辑态 contenteditable + 迷你工具栏 */
-export default function CanvasNodeEditor({ node, selected, editing, depth, onSelect, onEdit, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery }: Props) {
+export default function CanvasNodeEditor({ node, selected, editing, depth, onSelect, onEdit, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize }: Props) {
   const p = node.props || {};
   const isEditable = EDITABLE_TYPES.includes(node.type);
   const isImage = node.type === 'image' || node.type === 'gallery';
@@ -45,6 +46,25 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
     if (isEditable) onEdit(node.id);
     else if (node.type === 'image') onPickImage(node.id);
     else if (node.type === 'gallery') onPickGallery(node.id);
+  };
+
+  // 缩放手柄（SE/S 角）：拖动更新宽高
+  const startResize = (dir: 'se' | 's') => (e: React.PointerEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    const startX = e.clientX, startY = e.clientY;
+    const startW = parseFloat((p.width || '').replace('px', '')) || 200;
+    const startH = parseFloat((p.height || '').replace('px', '')) || 80;
+    const maxW = parseFloat((p.width || '').replace('px', '')) || 0;
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      const newW = Math.max(60, startW + dx);
+      const newH = Math.max(40, startH + dy);
+      onResize(node.id, { width: `${newW}px`, height: `${newH}px` });
+      void dir; void maxW;
+    };
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
   };
 
   // 编辑态：contenteditable
@@ -89,7 +109,7 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
             <CanvasNodeEditor
               node={c} selected={false} editing={editing} depth={depth + 1}
               onSelect={onSelect} onEdit={onEdit} onStopEdit={onStopEdit} onUpdateContent={onUpdateContent}
-              onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery}
+              onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} onResize={onResize}
             />
           </div>
         ))}
@@ -105,7 +125,7 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
         {node.children.map(c => (
           <CanvasNodeEditor key={c.id} node={c} selected={false} editing={editing} depth={depth + 1}
             onSelect={onSelect} onEdit={onEdit} onStopEdit={onStopEdit} onUpdateContent={onUpdateContent}
-            onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} />
+            onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} onResize={onResize} />
         ))}
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-3">拖入内容</div>}
       </div>
@@ -120,7 +140,7 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
         {node.children.map(c => (
           <CanvasNodeEditor key={c.id} node={c} selected={false} editing={editing} depth={depth + 1}
             onSelect={onSelect} onEdit={onEdit} onStopEdit={onStopEdit} onUpdateContent={onUpdateContent}
-            onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} />
+            onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} onResize={onResize} />
         ))}
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-3 py-4">卡片内容</div>}
       </div>
@@ -142,7 +162,7 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
         {node.children.map(c => (
           <CanvasNodeEditor key={c.id} node={c} selected={false} editing={editing} depth={depth + 1}
             onSelect={onSelect} onEdit={onEdit} onStopEdit={onStopEdit} onUpdateContent={onUpdateContent}
-            onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} />
+            onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} onResize={onResize} />
         ))}
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] py-4">拖入内容</div>}
         {selected ? <SelectMenu /> : editing ? renderToolbar() : null}
@@ -202,6 +222,16 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
           <button onClick={() => onMoveOrder(1)} className="px-1 hover:opacity-70" title="下移">↓</button>
           <button onClick={onDelete} className="px-1 hover:opacity-70 text-red-300" title="删除">🗑</button>
         </div>
+      )}
+
+      {/* 缩放手柄（选中时显示） */}
+      {selected && !isEditable && node.type !== 'spacer' && node.type !== 'divider' && (
+        <>
+          <div onPointerDown={startResize('se')} title="缩放"
+            className="absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-full bg-blue-500 border-2 border-white cursor-nwse-resize" style={{ touchAction: 'none' }} />
+          <div onPointerDown={startResize('s')} title="调整高度"
+            className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-6 h-2.5 rounded-full bg-blue-500 border border-white cursor-ns-resize" style={{ touchAction: 'none' }} />
+        </>
       )}
     </div>
   );
