@@ -7,6 +7,7 @@ import TravelogueRenderer from './content-renderers/TravelogueRenderer';
 import DiaryRenderer from './content-renderers/DiaryRenderer';
 import MixedRenderer from './content-renderers/MixedRenderer';
 import GridRenderer from './GridRenderer';
+import PageLayoutRenderer from './PageLayoutRenderer';
 
 interface Props {
   section: Section;
@@ -40,6 +41,8 @@ export default function SectionRenderer({ section, contentItems }: Props) {
 
   const style = section.style_config || {};
 
+  // 自由布局：板块内有内容项带 fields.page_layout 时，按 JSON 渲染整页
+  const freeLayout = contentItems.find(i => i.fields?.page_layout)?.fields.page_layout;
   // 可视化画布：若板块有任一内容项带了 fields.layout，则按 12 列网格渲染
   const hasGridLayout = contentItems.some(i => i.fields && i.fields.layout);
 
@@ -66,7 +69,9 @@ export default function SectionRenderer({ section, contentItems }: Props) {
           )}
         </div>
 
-        {hasGridLayout ? (
+        {freeLayout ? (
+          <PageLayoutRenderer layout={freeLayout} />
+        ) : hasGridLayout ? (
           <GridRenderer section={section} contentItems={contentItems} />
         ) : (
           <Renderer section={section} contentItems={contentItems} />

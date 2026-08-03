@@ -16,6 +16,7 @@ import ArticleSectionEditor from './editors/ArticleSectionEditor';
 import CardSectionEditor from './editors/CardSectionEditor';
 import GallerySectionEditor from './editors/GallerySectionEditor';
 import CanvasEditor from './canvas/CanvasEditor';
+import PageBuilder from '@/components/admin/builder/PageBuilder';
 import { GridLayout } from '@/types/content';
 
 export default function EditorPage() {
@@ -36,7 +37,7 @@ function EditorPageInner() {
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [editorMode, setEditorMode] = useState<'form' | 'canvas'>('form');
+  const [editorMode, setEditorMode] = useState<'form' | 'canvas' | 'free'>('form');
 
   const selectedSection = sections.find(s => s.id === selectedSectionId) || null;
 
@@ -217,6 +218,23 @@ function EditorPageInner() {
     setEditorMode('form');
   };
 
+  // 自由布局：从某内容项读取/写回 page_layout JSON
+  const getFreeLayout = (): any[] => {
+    const items = getSectionContent(selectedSectionId || '');
+    const holder = items.find(i => i.fields?.page_layout) || items[0];
+    return holder?.fields?.page_layout?.containers || [];
+  };
+
+  const saveFreeLayout = (containers: any[]) => {
+    if (!selectedSectionId) return;
+    const items = getSectionContent(selectedSectionId);
+    // 找一个持有 page_layout 的内容项；没有则用第一个（或新建）
+    const holder = items.find(i => i.fields?.page_layout) || items[0];
+    if (!holder) return;
+    saveContentItem(holder.id, { fields: { ...holder.fields, page_layout: { containers } } })
+      .then(ok => ok && toast.success('布局已保存'));
+  };
+
   const renderSectionEditor = () => {
     if (!selectedSection) {
       return (
@@ -227,6 +245,20 @@ function EditorPageInner() {
     }
 
     const items = getSectionContent(selectedSection.id);
+
+    // 自由布局模式：容器化页面构建器
+    if (editorMode === 'free') {
+      return (
+        <div className="h-[calc(100vh-12rem)]">
+          <PageBuilder
+            key={selectedSection.id}
+            layout={getFreeLayout()}
+            onSave={saveFreeLayout}
+            onExit={() => setEditorMode('form')}
+          />
+        </div>
+      );
+    }
 
     // 画布模式：可视化排版（拖拽换位 + 宽度缩放 + 智能排列）
     if (editorMode === 'canvas') {
@@ -388,6 +420,14 @@ function EditorPageInner() {
                     }`}
                   >
                     🖼️ 画布
+                  </button>
+                  <button
+                    onClick={() => setEditorMode('free')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      editorMode === 'free' ? 'bg-[#7c9a7f] text-white' : 'text-[#5a5349]'
+                    }`}
+                  >
+                    🧩 自由布局
                   </button>
                 </div>
                 {saving && <span>保存中...</span>}
