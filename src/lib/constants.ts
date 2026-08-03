@@ -20,7 +20,9 @@ export const ALLOWED_FILE_TYPES = [
   'application/zip',
 ];
 
-export const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+// 文件大小上限：15MB（相机照片 JPEG/RAW 导出常达 10-15MB）
+// 需与 Supabase 桶 portfolio-media 的 file_size_limit 一致（已同步调大）
+export const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
 
 export const STORAGE_BUCKET = 'portfolio-media';
 

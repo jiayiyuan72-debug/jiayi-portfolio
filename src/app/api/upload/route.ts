@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // 验证文件大小
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: '文件过大（最大 2MB）' }, { status: 400 });
+      return NextResponse.json({ error: `文件过大（最大 ${Math.round(MAX_FILE_SIZE / 1024 / 1024)}MB，当前 ${(file.size / 1024 / 1024).toFixed(1)}MB）` }, { status: 400 });
     }
 
     // 生成安全文件名
@@ -43,7 +43,15 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Upload error:', error);
-      return NextResponse.json({ error: '上传失败：' + error.message }, { status: 500 });
+      // 把 Supabase 的英文/晦涩报错映射成友好中文提示
+      const msg = String(error.message || '');
+      let friendly = '上传失败：' + msg;
+      if (/exceeded the maximum allowed size|file_size_limit|too large/i.test(msg)) {
+        friendly = '图片太大，超出服务器允许的上限，请压缩后再上传';
+      } else if (/expected pattern|invalid|format|mime|content.?type/i.test(msg)) {
+        friendly = '图片格式不兼容，请转换为 JPG/PNG/WebP 后再上传';
+      }
+      return NextResponse.json({ error: friendly }, { status: 500 });
     }
 
     // 获取公开 URL
