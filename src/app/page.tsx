@@ -28,37 +28,44 @@ export default function HomePage() {
       .catch(() => setLoading(false));
   }, []);
 
-  const goExplore = () => {
+  // 问卷完成后进入的内容页路由：多页面结构下，落到第一个可见板块页（如 /about）
+  // 若无可见板块则回首页，保证始终有页面可去
+  const contentPath = sections.length > 0 ? `/${sections[0].slug}` : '/';
+
+  const handleVisitorClick = () => {
     const stored = localStorage.getItem(QUESTIONNAIRE_KEY);
+    let entered = false;
     if (stored) {
       try {
         const data = JSON.parse(stored);
-        if (data.submitted) return;
-        if (data.skippedAt) {
+        if (data.submitted) {
+          entered = true;
+        } else if (data.skippedAt) {
           const daysSinceSkip = (Date.now() - data.skippedAt) / (1000 * 60 * 60 * 24);
-          if (daysSinceSkip < SKIP_DAYS) return;
+          if (daysSinceSkip < SKIP_DAYS) entered = true;
         }
       } catch {
         // ignore
       }
     }
+    // 已提交过或跳过未过期：直接进入内容页（不弹问卷）
+    if (entered) {
+      router.push(contentPath);
+      return;
+    }
+    // 首次访问：弹出问卷
     setShowQuestionnaire(true);
   };
 
   const handleQuestionnaireComplete = () => {
     setShowQuestionnaire(false);
-    scrollToCards();
+    router.push(contentPath);
   };
 
   const handleSkip = () => {
     localStorage.setItem(QUESTIONNAIRE_KEY, JSON.stringify({ skippedAt: Date.now() }));
     setShowQuestionnaire(false);
-    scrollToCards();
-  };
-
-  const scrollToCards = () => {
-    const el = document.getElementById('explore');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    router.push(contentPath);
   };
 
   if (loading) {
@@ -100,7 +107,7 @@ export default function HomePage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center entry-enter">
             <button
-              onClick={goExplore}
+              onClick={handleVisitorClick}
               className="px-10 py-3 bg-[#2d2a24] text-[#faf7f2] rounded-full text-base
                          hover:bg-[#4a443c] transition-all duration-300 tracking-wider
                          shadow-sm hover:shadow-md active:scale-[0.98]"

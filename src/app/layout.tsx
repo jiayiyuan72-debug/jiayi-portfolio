@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,6 +21,8 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-[#faf7f2] text-[#2d2a24]">
         {children}
+        {/* react-hot-toast 全局提示（问卷验证错误等） */}
+        <Toaster position="top-center" />
       </body>
     </html>
   );
