@@ -1,4 +1,5 @@
 import { Section, ContentItem, GridLayout } from '@/types';
+import BlockRenderer from './BlockRenderer';
 
 interface Props {
   section: Section;
@@ -38,10 +39,21 @@ export default function GridRenderer({ section, contentItems }: Props) {
   );
 }
 
-/** 单个网格块的内容渲染（按 content_type 简化展示） */
+/** 单个网格块的内容渲染（优先渲染块编辑器内容，否则按 content_type 简化展示） */
 function GridBlockContent({ item }: { item: ContentItem }) {
   const fields = item.fields || {};
   const cover = fields.cover_image || fields.image;
+  const hasBlocks = Array.isArray(fields.blocks) && fields.blocks.length > 0;
+
+  // 内容同时带有块编辑器数据时，用 BlockRenderer 渲染（兼容画布+块编辑并存）
+  if (fields.useBlockEditor || hasBlocks) {
+    return (
+      <div className="text-left">
+        {item.title && <h4 className="text-lg font-semibold text-[#2d2a24] mb-2">{item.title}</h4>}
+        <BlockRenderer blocks={(fields.blocks || []).filter((b: any) => !(b.type === 'image' && !(b.props?.url)))} />
+      </div>
+    );
+  }
 
   return (
     <div className="text-left">
