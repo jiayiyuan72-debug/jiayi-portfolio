@@ -2,6 +2,10 @@ import { PageContainer, ImageFocal } from '@/types/page-layout';
 
 interface Props {
   container: PageContainer;
+  /** 编辑态：文本容器 contentEditable、图片容器可触发上传（后台编辑器用） */
+  editing?: boolean;
+  onEditContent?: (patch: Record<string, any>) => void;
+  onPickImage?: () => void;
 }
 
 // 图片 cover 模式：根据焦点 focal 计算展示的哪一部分
@@ -27,7 +31,7 @@ function focalBackground(url: string, fit: string, focal?: ImageFocal) {
 }
 
 /** 单个容器内容渲染（前台与编辑预览共用） */
-export default function ContainerContentView({ container }: Props) {
+export default function ContainerContentView({ container, editing, onEditContent, onPickImage }: Props) {
   const { type, content } = container;
   const style = container.style || {};
 
@@ -37,14 +41,30 @@ export default function ContainerContentView({ container }: Props) {
       const fontSize = autoFont ? Math.max(10, (container.w || 200) * 0.08) : (content.fontSize || DEFAULT_FONT);
       return (
         <div
-          className="whitespace-pre-wrap leading-relaxed"
-          style={{ color: style.color || '#2d2a24', textAlign: content.align || 'left', fontSize, lineHeight: 1.5 }}
+          className={`whitespace-pre-wrap leading-relaxed ${editing ? 'cursor-text outline-none' : ''}`}
+          style={{ color: style.color || '#2d2a24', textAlign: content.align || 'left', fontSize, lineHeight: 1.5, minHeight: '100%' }}
+          contentEditable={editing || undefined}
+          suppressContentEditableWarning
+          onBlur={(e) => onEditContent?.({ text: e.currentTarget.innerText })}
         >
-          {content.text || ''}
+          {!editing && (content.text || '')}
+          {editing && ''}
         </div>
       );
     }
     case 'image': {
+      if (editing && onPickImage) {
+        // 编辑态：双击图片容器→上传（提示占位，双击由上层触发 onPickImage）
+        return (
+          <div
+            className="w-full h-full flex flex-col items-center justify-center text-xs text-[#b8b4ae] bg-[#f5f5f0] rounded cursor-pointer hover:bg-[#efefec]"
+            onClick={onPickImage}
+          >
+            <span className="text-xl mb-1">🖼️</span>
+            {content.url ? <span className="px-2">点击更换图片</span> : <span>双击上传图片</span>}
+          </div>
+        );
+      }
       if (!content.url) {
         return <div className="w-full h-full flex items-center justify-center text-xs text-[#b8b4ae] bg-[#f5f5f0]">图片</div>;
       }
@@ -100,6 +120,37 @@ export default function ContainerContentView({ container }: Props) {
     case 'divider':
       return (
         <div className="w-full" style={{ borderTop: `1px ${content.style || 'solid'} #e8e4de` }} />
+      );
+    case 'quote':
+      return (
+        <div className="w-full h-full p-2 border-l-4 border-[#d4a574] bg-[#f8f5f0] flex flex-col justify-center overflow-hidden">
+          <div className="text-sm text-[#5a5349] italic whitespace-pre-wrap">{content.text || '引用…'}</div>
+          {content.author && <div className="text-xs text-[#b8b4ae] mt-1">— {content.author}</div>}
+        </div>
+      );
+    case 'gallery':
+      return (
+        <div className="w-full h-full overflow-auto grid gap-1" style={{ gridTemplateColumns: 'repeat(3,1fr)', gridAutoRows: '1fr' }}>
+          {(content.images || []).map((img: string, i: number) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={img} className="w-full h-full object-cover rounded" />
+          ))}
+          {(!content.images || content.images.length === 0) && (
+            <div className="col-span-3 flex items-center justify-center text-xs text-[#b8b4ae] bg-[#f5f5f0] rounded">双击添加图片</div>
+          )}
+        </div>
+      );
+    case 'section':
+    case 'row':
+    case 'column':
+      // 布局容器：透明骨架，供子容器定位
+      return (
+        <div className="w-full h-full"
+          style={{ background: style.bg || 'transparent', border: style.outline ? '1px dashed #d4a57480' : 'none', borderRadius: style.radius ?? 0 }}>
+          {content.label && editing && (
+            <div className="absolute top-1 left-2 text-[10px] text-[#b8b4ae]">{content.label}</div>
+          )}
+        </div>
       );
     case 'spacer':
     case 'group':

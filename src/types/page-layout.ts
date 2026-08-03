@@ -2,14 +2,19 @@
 // 布局 JSON 存于 ContentItem.fields.page_layout（与 12 列画布的 fields.layout 区分）
 
 export type PageContainerType =
+  | 'section'
+  | 'row'
+  | 'column'
+  | 'card'
   | 'text'
   | 'image'
   | 'video'
   | 'rich'
-  | 'card'
   | 'button'
+  | 'quote'
   | 'divider'
   | 'spacer'
+  | 'gallery'
   | 'group';
 
 // 图片填充模式
@@ -42,14 +47,19 @@ export interface PageLayout {
 export const DEFAULT_PAGE_FONT = 14;
 
 export const CONTAINER_TYPE_LABELS: Record<PageContainerType, { label: string; icon: string }> = {
+  section: { label: '区块', icon: '🗂️' },
+  row: { label: '行', icon: '🛤️' },
+  column: { label: '列', icon: '📚' },
+  card: { label: '卡片', icon: '🃏' },
   text: { label: '文本', icon: '📝' },
   image: { label: '图片', icon: '🖼️' },
   video: { label: '视频', icon: '🎬' },
   rich: { label: '富文本', icon: '🧾' },
-  card: { label: '卡片', icon: '🗂️' },
   button: { label: '按钮', icon: '🔘' },
+  quote: { label: '引用', icon: '💬' },
   divider: { label: '分隔线', icon: '➖' },
   spacer: { label: '占位', icon: '␣' },
+  gallery: { label: '图片组', icon: '🖼️' },
   group: { label: '容器组', icon: '📦' },
 };
 
@@ -57,22 +67,32 @@ export const CONTAINER_TYPE_LABELS: Record<PageContainerType, { label: string; i
 export function defaultContainer(type: PageContainerType): PageContainer {
   const base = { id: crypto.randomUUID(), type, x: 20, y: 20, w: 200, h: 120, z: 1, parentId: null, content: {}, style: {} };
   switch (type) {
+    case 'section':
+      return { ...base, content: { label: '区块' }, style: { bg: 'transparent', outline: true }, w: 560, h: 240 };
+    case 'row':
+      return { ...base, content: { label: '行' }, style: { bg: 'transparent', outline: true }, w: 480, h: 120 };
+    case 'column':
+      return { ...base, content: { label: '列' }, style: { bg: 'transparent', outline: true }, w: 160, h: 240 };
+    case 'card':
+      return { ...base, content: { title: '卡片标题', text: '卡片内容…' }, style: { bg: '#ffffff', radius: 8, border: true }, w: 240, h: 140 };
     case 'text':
-      return { ...base, content: { text: '在这里输入文本…', autoFont: false, align: 'left' }, style: { color: '#2d2a24' }, w: 240, h: 80 };
+      return { ...base, content: { text: '双击编辑文本…', autoFont: false, align: 'left' }, style: { color: '#2d2a24' }, w: 240, h: 80 };
     case 'image':
       return { ...base, content: { url: '', fit: 'contain', focal: { x: 0.5, y: 0.5, scale: 1 } }, w: 240, h: 160 };
     case 'video':
       return { ...base, content: { url: '', type: 'embed' }, w: 320, h: 180 };
     case 'rich':
       return { ...base, content: { html: '' }, w: 300, h: 160 };
-    case 'card':
-      return { ...base, content: { title: '卡片标题', text: '卡片内容…' }, style: { bg: '#ffffff', radius: 8, border: true }, w: 240, h: 140 };
     case 'button':
       return { ...base, content: { label: '按钮', href: '', color: '#2d2a24', textColor: '#ffffff' }, w: 120, h: 40 };
+    case 'quote':
+      return { ...base, content: { text: '引用内容…', author: '' }, w: 280, h: 90 };
     case 'divider':
       return { ...base, content: { style: 'solid' }, h: 24, w: 240 };
     case 'spacer':
       return { ...base, content: {}, style: { bg: 'transparent' }, w: 200, h: 80 };
+    case 'gallery':
+      return { ...base, content: { images: [] }, w: 320, h: 160 };
     case 'group':
       return { ...base, content: {}, style: { label: '容器组' }, w: 300, h: 200 };
   }

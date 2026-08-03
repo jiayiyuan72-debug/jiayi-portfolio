@@ -11,6 +11,7 @@ interface HistoryState {
 }
 
 export const GRID_SIZE_OPTIONS = [4, 8, 12, 20];
+const MAX_HISTORY = 50;
 
 interface BuilderState extends HistoryState {
   selectedIds: string[];
@@ -42,6 +43,18 @@ function buildTree(containers: PageContainer[], parentId: string | null): PageCo
     .sort((a, b) => a.z - b.z);
 }
 
+// 计算某容器在树中的深度（根级为 1）
+export function getContainerDepth(containers: PageContainer[], id: string | null): number {
+  if (!id) return 0;
+  let depth = 0;
+  let cur: PageContainer | undefined = containers.find(c => c.id === id);
+  while (cur && cur.parentId) {
+    depth++;
+    cur = containers.find(c => c.id === cur!.parentId);
+  }
+  return cur ? depth + 1 : 1;
+}
+
 export { buildTree };
 
 export const useBuilderStore = create<BuilderState>((set) => ({
@@ -58,7 +71,7 @@ export const useBuilderStore = create<BuilderState>((set) => ({
       let past = state.past;
       let future: PageContainer[][] = [];
       if (recordHistory) {
-        past = [...state.past, state.present];
+        past = [...state.past, state.present].slice(-MAX_HISTORY);
         future = [];
       }
       return { past, present: containers, future };
@@ -150,7 +163,7 @@ export const useBuilderStore = create<BuilderState>((set) => ({
       return {
         past: state.past.slice(0, -1),
         present: previous,
-        future: [state.present, ...state.future],
+        future: [state.present, ...state.future].slice(0, MAX_HISTORY),
         selectedIds: [],
       };
     }),
@@ -160,7 +173,7 @@ export const useBuilderStore = create<BuilderState>((set) => ({
       if (state.future.length === 0) return state;
       const next = state.future[0];
       return {
-        past: [...state.past, state.present],
+        past: [...state.past, state.present].slice(-MAX_HISTORY),
         present: next,
         future: state.future.slice(1),
         selectedIds: [],
@@ -169,7 +182,7 @@ export const useBuilderStore = create<BuilderState>((set) => ({
 
   commit: () =>
     set(state => ({
-      past: [...state.past, state.present],
+      past: [...state.past, state.present].slice(-MAX_HISTORY),
       future: [],
     })),
 }));

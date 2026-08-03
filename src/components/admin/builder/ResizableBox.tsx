@@ -2,30 +2,36 @@
 
 import { useRef } from 'react';
 
+// 容器最小尺寸（PRD：80×32 后不再缩小）
+const MIN_W = 80;
+const MIN_H = 32;
+
 interface Props {
   x: number;
   y: number;
   w: number;
   h: number;
   selected: boolean;
+  editing?: boolean;
   bounds: { w: number; h: number };
   onDrag: (x: number, y: number) => void;
   onResize: (w: number, h: number, x: number, y: number) => void;
   onDragEnd: () => void;
   onResizeEnd: () => void;
   onSelect: (e: React.MouseEvent) => void;
-  onDelete?: () => void;
+  onDoubleClick?: () => void;
   children: React.ReactNode;
 }
 
 /** 自研可拖拽/缩放容器：原生 Pointer Events，兼容 React 19（react-rnd 依赖 findDOMNode 已移除导致不兼容） */
-export default function ResizableBox({ x, y, w, h, selected, bounds, onDrag, onResize, onDragEnd, onResizeEnd, onSelect, onDelete, children }: Props) {
+export default function ResizableBox({ x, y, w, h, selected, editing, bounds, onDrag, onResize, onDragEnd, onResizeEnd, onSelect, onDoubleClick, children }: Props) {
   const rectRef = useRef({ x, y, w, h });
   const startRef = useRef<{ px: number; py: number; x: number; y: number; w: number; h: number; dir?: string; moved: boolean } | null>(null);
 
   rectRef.current = { x, y, w, h };
 
   const begin = (e: React.PointerEvent, dir?: string) => {
+    if (editing && !dir) return; // 编辑态下的点击不触发拖拽
     e.stopPropagation();
     e.preventDefault();
     const node = e.currentTarget as HTMLElement;
@@ -39,7 +45,6 @@ export default function ResizableBox({ x, y, w, h, selected, bounds, onDrag, onR
     if (!s) return;
     const dx = e.clientX - s.px;
     const dy = e.clientY - s.py;
-    const min = 20;
     if (!s.dir) {
       // 拖拽移动
       s.moved = true;
@@ -47,13 +52,13 @@ export default function ResizableBox({ x, y, w, h, selected, bounds, onDrag, onR
       const ny = Math.max(0, Math.min(bounds.h - s.h, s.y + dy));
       onDrag(nx, ny);
     } else {
-      // 缩放
+      // 缩放（最小 80×32）
       s.moved = true;
       let nw = s.w, nh = s.h, nx = s.x, ny = s.y;
-      if (s.dir.includes('e')) { nw = Math.max(min, s.w + dx); }
-      if (s.dir.includes('s')) { nh = Math.max(min, s.h + dy); }
-      if (s.dir.includes('w')) { nw = Math.max(min, s.w - dx); nx = s.x + s.w - nw; }
-      if (s.dir.includes('n')) { nh = Math.max(min, s.h - dy); ny = s.y + s.h - nh; }
+      if (s.dir.includes('e')) { nw = Math.max(MIN_W, s.w + dx); }
+      if (s.dir.includes('s')) { nh = Math.max(MIN_H, s.h + dy); }
+      if (s.dir.includes('w')) { nw = Math.max(MIN_W, s.w - dx); nx = s.x + s.w - nw; }
+      if (s.dir.includes('n')) { nh = Math.max(MIN_H, s.h - dy); ny = s.y + s.h - nh; }
       onResize(nw, nh, nx, ny);
     }
   };
@@ -88,8 +93,8 @@ export default function ResizableBox({ x, y, w, h, selected, bounds, onDrag, onR
       onPointerMove={move}
       onPointerUp={end}
       onPointerCancel={end}
-      onDoubleClick={onDelete}
-      onClick={(e) => { e.stopPropagation(); onSelect(e); }}
+      onDoubleClick={onDoubleClick ? (e) => { e.stopPropagation(); onDoubleClick(); } : undefined}
+      onClick={(e) => { e.stopPropagation(); if (!editing) onSelect(e); }}
       className={`absolute ${selected ? 'select-none' : ''}`}
       style={{ left: x, top: y, width: w, height: h, zIndex: 1, touchAction: 'none' }}
     >
