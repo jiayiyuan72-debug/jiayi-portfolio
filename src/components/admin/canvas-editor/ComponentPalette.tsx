@@ -4,19 +4,20 @@ import { CanvasType, CANVAS_TYPE_LABELS } from '@/types/canvas';
 
 interface Props {
   onDragStart: (type: CanvasType) => (e: React.DragEvent) => void;
+  /** 指针式拖拽（HTML5 拖拽不可靠时的兜底/主方案） */
+  onPointerStart: (type: CanvasType) => (e: React.PointerEvent) => void;
 }
 
 const LAYOUT: CanvasType[] = ['section', 'row', 'column', 'card'];
 const CONTENT: CanvasType[] = ['text', 'image', 'quote', 'divider', 'spacer', 'gallery'];
 
-/** 左侧组件库：布局容器 + 内容容器，支持拖出（用 div 而非 button，避免按钮拖拽被浏览器抑制） */
-export default function ComponentPalette({ onDragStart }: Props) {
+/** 左侧组件库：用指针事件实现可靠拖拽（不从 HTML5 drag 依赖） */
+export default function ComponentPalette({ onDragStart, onPointerStart }: Props) {
   const render = (t: CanvasType) => (
     <div
       key={t}
-      draggable
-      onDragStart={onDragStart(t)}
-      onDragEnd={(e) => e.preventDefault()}
+      draggable={false}
+      onPointerDown={onPointerStart(t)}
       className="flex flex-col items-center gap-1 px-1 py-2 rounded-lg border border-[#e8e4de] bg-[#f8f5f0] hover:border-[#d4a574] hover:bg-white transition-colors cursor-grab select-none"
       title={`拖入${CANVAS_TYPE_LABELS[t].label}`}
     >
@@ -27,7 +28,7 @@ export default function ComponentPalette({ onDragStart }: Props) {
 
   return (
     <div className="w-44 bg-white border-r border-[#e8e4de] p-3 overflow-y-auto flex-shrink-0">
-      <p className="text-xs text-[#8b8b8b] mb-2">组件库（拖入画板）</p>
+      <p className="text-xs text-[#8b8b8b] mb-2">组件库（按下拖入画板）</p>
       <p className="text-[10px] text-[#b8b4ae] mb-1">布局容器</p>
       <div className="grid grid-cols-2 gap-1.5 mb-3">{LAYOUT.map(render)}</div>
       <p className="text-[10px] text-[#b8b4ae] mb-1">内容容器</p>
@@ -35,3 +36,4 @@ export default function ComponentPalette({ onDragStart }: Props) {
     </div>
   );
 }
+

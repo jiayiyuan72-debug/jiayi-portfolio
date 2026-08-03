@@ -69,7 +69,43 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
     setSelectedId(null); setEditingId(null);
   };
 
-  // ---- 拖放：根级 append override（命中/嵌套由后续增强）----
+  // ---- 拖放创建：优先指针式（可靠），HTML5 作兜底 ----
+  const dragTypeRef = useRef<CanvasType | null>(null);
+  const startPointRef = useRef<{ x: number; y: number } | null>(null);
+
+  const onPointerStart = (type: CanvasType) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    dragTypeRef.current = type;
+    startPointRef.current = { x: e.clientX, y: e.clientY };
+    const move = (ev: PointerEvent) => {
+      // 跟踪，可加 ghost 指示（此处最小实现：进入画板即高亮）
+    };
+    window.addEventListener('pointermove', move);
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      endPointerDrag(ev);
+    };
+    window.addEventListener('pointerup', up);
+  };
+
+  const endPointerDrag = (e: PointerEvent) => {
+    const type = dragTypeRef.current;
+    dragTypeRef.current = null;
+    if (!type || !startPointRef.current) return;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    startPointRef.current = null;
+    // 松手时鼠标是否在画板内
+    if (!rect) return;
+    const inside = e.clientX >= rect.left - 8 && e.clientX <= rect.right + 8 && e.clientY >= rect.top - 8 && e.clientY <= rect.bottom + 8;
+    if (!inside) return;
+    const node = defaultCanvasNode(type);
+    setTree([...trees, node]);
+    setSelectedId(node.id);
+    if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
+  };
+
+  // HTML5 兜底
   const onDragStart = (type: CanvasType) => (e: React.DragEvent) => e.dataTransfer.setData('application/x-canvas-type', type);
   const onDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
   const onDrop = (e: React.DragEvent) => {
@@ -193,7 +229,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <ComponentPalette onDragStart={onDragStart} />
+        <ComponentPalette onDragStart={onDragStart} onPointerStart={onPointerStart} />
 
         {/* 画板 */}
         <div className="flex-1 overflow-auto p-4">
