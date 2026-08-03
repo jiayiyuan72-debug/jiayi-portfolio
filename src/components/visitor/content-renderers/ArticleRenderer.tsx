@@ -1,4 +1,5 @@
 import { Section, ContentItem } from '@/types';
+import BlockRenderer from '../BlockRenderer';
 
 interface Props {
   section: Section;
@@ -10,6 +11,8 @@ export default function ArticleRenderer({ section, contentItems }: Props) {
     <div className="space-y-8">
       {contentItems.map(item => {
         const fields = item.fields || {};
+        const hasBlocks = Array.isArray(fields.blocks) && fields.blocks.length > 0;
+        const useBlocks = fields.useBlockEditor || hasBlocks;
 
         return (
           <article
@@ -41,11 +44,17 @@ export default function ArticleRenderer({ section, contentItems }: Props) {
               </p>
             )}
 
-            {/* 正文 */}
-            {item.body && (
-              <div className="prose text-sm text-[#5a5349] whitespace-pre-line">
-                {item.body}
+            {/* 正文：块编辑模式用 BlockRenderer，经典模式用 body */}
+            {useBlocks ? (
+              <div className="prose text-sm text-[#5a5349]">
+                <BlockRenderer blocks={fields.blocks} />
               </div>
+            ) : (
+              item.body && (
+                <div className="prose text-sm text-[#5a5349] whitespace-pre-line">
+                  {item.body}
+                </div>
+              )
             )}
 
             {/* 标签 */}

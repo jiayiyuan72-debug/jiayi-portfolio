@@ -1,4 +1,5 @@
 import { Section, ContentItem } from '@/types';
+import BlockRenderer from '../BlockRenderer';
 
 interface Props {
   section: Section;
@@ -32,11 +33,17 @@ export default function TravelogueRenderer({ section, contentItems }: Props) {
                 </span>
               )}
 
-              {/* 日记内容 */}
-              {item.body && (
-                <div className="prose text-sm text-[#5a5349] whitespace-pre-line">
-                  {item.body}
+              {/* 日记内容：块编辑模式用 BlockRenderer，经典模式用 body */}
+              {Array.isArray(fields.blocks) && fields.blocks.length > 0 ? (
+                <div className="prose text-sm text-[#5a5349]">
+                  <BlockRenderer blocks={fields.blocks} />
                 </div>
+              ) : (
+                item.body && (
+                  <div className="prose text-sm text-[#5a5349] whitespace-pre-line">
+                    {item.body}
+                  </div>
+                )
               )}
 
               {/* 照片集占位 */}

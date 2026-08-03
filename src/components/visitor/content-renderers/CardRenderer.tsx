@@ -1,4 +1,5 @@
 import { Section, ContentItem } from '@/types';
+import BlockRenderer from '../BlockRenderer';
 
 interface Props {
   section: Section;
@@ -30,14 +31,20 @@ export default function CardRenderer({ section, contentItems }: Props) {
 
             <h3 className="text-lg font-semibold text-[#2d2a24] mb-2">{item.title}</h3>
 
-            {/* 正文 */}
-            {item.body && (
-              <div className="text-sm text-[#5a5349] leading-relaxed whitespace-pre-line mb-3">
-                {item.body.length > 200
-                  ? item.body.slice(0, 200) + '...'
-                  : item.body
-                }
+            {/* 正文：块编辑模式用 BlockRenderer，经典模式用 body */}
+            {Array.isArray(fields.blocks) && fields.blocks.length > 0 ? (
+              <div className="text-sm text-[#5a5349] leading-relaxed mb-3">
+                <BlockRenderer blocks={fields.blocks} />
               </div>
+            ) : (
+              item.body && (
+                <div className="text-sm text-[#5a5349] leading-relaxed whitespace-pre-line mb-3">
+                  {item.body.length > 200
+                    ? item.body.slice(0, 200) + '...'
+                    : item.body
+                  }
+                </div>
+              )
             )}
 
             {/* 字段内容 */}

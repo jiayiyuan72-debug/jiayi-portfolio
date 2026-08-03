@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Section, ContentItem } from '@/types';
+import BlockModeField from '@/components/admin/block-editor/BlockModeField';
 
 interface Props {
   section: Section;
@@ -101,9 +102,13 @@ export default function TravelogueSectionEditor({ section, contentItems, onCreat
 
                   <div>
                     <label className="block text-xs text-[#8b8b8b] mb-1">旅游日记</label>
-                    <textarea value={editForm.body || ''}
-                      onChange={e => setEditForm(prev => ({ ...prev, body: e.target.value }))}
-                      rows={8} placeholder="Day 1&#10;到达厦门已是下午...&#10;&#10;Day 2&#10;上午去了鼓浪屿..." className="w-full px-3 py-2 border border-[#e8e4de] rounded-lg text-sm resize-y font-mono" />
+                    <BlockModeField
+                      body={editForm.body || ''}
+                      fields={editForm.fields || {}}
+                      onBodyChange={value => setEditForm(prev => ({ ...prev, body: value }))}
+                      onFieldsChange={fields => setEditForm(prev => ({ ...prev, fields }))}
+                      defaultBlockMode={!!(item.fields?.useBlockEditor)}
+                    />
                   </div>
 
                   <div>

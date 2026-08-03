@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Section, ContentItem } from '@/types';
+import BlockModeField from '@/components/admin/block-editor/BlockModeField';
 
 interface Props {
   section: Section;
@@ -121,9 +122,13 @@ export default function DiarySectionEditor({ section, contentItems, onCreate, on
 
                   <div>
                     <label className="block text-xs text-[#8b8b8b] mb-1">日记内容</label>
-                    <textarea value={editForm.body || ''}
-                      onChange={e => setEditForm(prev => ({ ...prev, body: e.target.value }))}
-                      rows={6} className="w-full px-3 py-2 border border-[#e8e4de] rounded-lg text-sm resize-y" />
+                    <BlockModeField
+                      body={editForm.body || ''}
+                      fields={editForm.fields || {}}
+                      onBodyChange={value => setEditForm(prev => ({ ...prev, body: value }))}
+                      onFieldsChange={fields => setEditForm(prev => ({ ...prev, fields }))}
+                      defaultBlockMode={!!(item.fields?.useBlockEditor)}
+                    />
                   </div>
 
                   <div className="flex gap-2 pt-2">

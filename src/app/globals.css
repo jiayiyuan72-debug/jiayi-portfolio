@@ -137,3 +137,25 @@ body {
   letter-spacing: 0.05em;
   color: #8b8b8b;
 }
+
+/* ===== 可视化块编辑器 / 块渲染样式 ===== */
+/* 块容器标题级别 */
+.block-container h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0.75em 0 0.4em;
+}
+.block-container h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0.6em 0 0.35em;
+}
+.block-container h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0.5em 0 0.3em;
+}
+.block-container blockquote {
+  background: #f8f5f0;
+  border-radius: 0 0.5rem 0.5rem 0;
+}
