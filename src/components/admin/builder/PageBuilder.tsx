@@ -24,10 +24,12 @@ export default function PageBuilder({ layout, onSave, onExit }: Props) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [dragBox, setDragBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
+  // 仅在布局内容真正变化时载入 store（避免 layout 数组引用每渲染都变 → set 反复 → 无限循环）
+  const layoutKey = JSON.stringify(layout || []);
   useEffect(() => {
-    setContainers(layout, false);
+    try { setContainers(JSON.parse(layoutKey), false); } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout]);
+  }, [layoutKey]);
 
   const childrenOf = useCallback((parentId: string | null) => buildTree(present, parentId), [present]);
 
@@ -129,6 +131,7 @@ export default function PageBuilder({ layout, onSave, onExit }: Props) {
             <BuilderNode
               key={c.id}
               container={c}
+              present={present}
               selected={isSelected(c.id)}
               onSelect={(e) => { e.stopPropagation(); select(c.id); }}
               onMove={(x, y) => handleMove(c.id, x, y)}
@@ -165,9 +168,10 @@ export default function PageBuilder({ layout, onSave, onExit }: Props) {
 }
 
 function BuilderNode({
-  container, selected, onSelect, onMove, onMoveEnd, onResize, onResizeEnd,
+  container, present, selected, onSelect, onMove, onMoveEnd, onResize, onResizeEnd,
 }: {
   container: PageContainer;
+  present: PageContainer[];
   selected: boolean;
   onSelect: (e: React.MouseEvent) => void;
   onMove: (x: number, y: number) => void;
@@ -175,7 +179,7 @@ function BuilderNode({
   onResize: (w: number, h: number, x: number, y: number) => void;
   onResizeEnd: () => void;
 }) {
-  const children = useBuilderStore(s => s.present.filter(cc => cc.parentId === container.id));
+  const children = present.filter(cc => cc.parentId === container.id);
   const isRoot = !container.parentId;
   const parentW = isRoot ? PAGE_W : container.w;
   const parentH = isRoot ? PAGE_H : container.h;
@@ -205,6 +209,7 @@ function BuilderNode({
               <BuilderNode
                 key={child.id}
                 container={child}
+                present={present}
                 selected={selected}
                 onSelect={onSelect}
                 onMove={onMove}
