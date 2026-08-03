@@ -71,7 +71,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
 
   // ---- 拖放：根级 append override（命中/嵌套由后续增强）----
   const onDragStart = (type: CanvasType) => (e: React.DragEvent) => e.dataTransfer.setData('application/x-canvas-type', type);
-  const onDragOver = (e: React.DragEvent) => { if (e.dataTransfer.types.includes('application/x-canvas-type')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } };
+  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const type = e.dataTransfer.getData('application/x-canvas-type') as CanvasType;
