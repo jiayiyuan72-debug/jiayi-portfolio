@@ -54,16 +54,23 @@ export default function ImageBlockEdit({ block, onChange }: Props) {
     if (!ctx) throw new Error('无法处理图片');
     ctx.drawImage(img, 0, 0, width, height);
 
+    const toBlob = (q: number) =>
+      new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('压缩失败'))), 'image/jpeg', q)
+      );
+
     // 逐级压缩，直到体积足够小
     let quality = JPEG_QUALITY;
-    let blob = await new Promise<Blob>(resolve =>
-      canvas.toBlob(b => resolve(b || new Blob([])), 'image/jpeg', quality)
-    );
-    while (blob.size > TARGET_MAX_BYTES && quality > 0.5) {
-      quality -= 0.1;
-      blob = await new Promise<Blob>(resolve =>
-        canvas.toBlob(b => resolve(b || new Blob([])), 'image/jpeg', quality)
-      );
+    let blob: Blob;
+    try {
+      blob = await toBlob(quality);
+      while (blob.size > TARGET_MAX_BYTES && quality > 0.5) {
+        quality -= 0.1;
+        blob = await toBlob(quality);
+      }
+    } catch (e) {
+      // 压缩失败时抛给上层，由 handleUpload 回退原图
+      throw e;
     }
     return blob;
   };
@@ -74,9 +81,15 @@ export default function ImageBlockEdit({ block, onChange }: Props) {
       // 大图/非图片类型尽量压缩后再传；已很小或非 JPEG 类型则原样传
       let uploadTarget: Blob = file;
       if (file.type.startsWith('image/') && file.size > 1.5 * 1024 * 1024) {
-        const compressed = await compressImage(file);
-        if (compressed.size < file.size) {
-          uploadTarget = compressed;
+        try {
+          const compressed = await compressImage(file);
+          // 仅当压缩结果非空且更小时才用，避免压缩失败(空 blob)导致上传空图
+          if (compressed && compressed.size > 0 && compressed.size < file.size) {
+            uploadTarget = compressed;
+          }
+        } catch {
+          // 压缩失败则回退原图
+          uploadTarget = file;
         }
       }
 
