@@ -89,8 +89,6 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
   };
 
   // ---- Add component: to selected container or root ----
-  const dragTypeRef = useRef<CanvasType | null>(null);
-
   const addComponent = (type: CanvasType) => {
     const node = defaultCanvasNode(type);
 
@@ -116,26 +114,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
   };
 
-  const onPointerStart = (type: CanvasType) => (e: React.PointerEvent) => {
-    dragTypeRef.current = type;
-    let didMove = false;
-    const move = () => { didMove = true; };
-    window.addEventListener('pointermove', move);
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      if (dragTypeRef.current && didMove) {
-        addComponent(dragTypeRef.current);
-        dragTypeRef.current = null;
-      } else {
-        dragTypeRef.current = null;
-      }
-    };
-    window.addEventListener('pointerup', up);
-  };
-
-  // HTML5 drag fallback
-  const onDragStart = (type: CanvasType) => (e: React.DragEvent) => e.dataTransfer.setData('application/x-canvas-type', type);
+  // HTML5 drag-and-drop on canvas (for future use)
   const onDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -301,7 +280,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         {!preview && (
-          <ComponentPalette onDragStart={onDragStart} onPointerStart={onPointerStart} onAddClick={addComponent} />
+          <ComponentPalette onAddClick={addComponent} />
         )}
 
         {/* Canvas */}
