@@ -4,6 +4,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Section, ContentItem, Block } from '@/types';
 import BlockEditor from '@/components/admin/block-editor/BlockEditor';
+import SortableList, { SortableItem } from '@/components/admin/editor/SortableList';
 
 interface Props {
   section: Section;
@@ -28,12 +29,6 @@ export default function ArticleSectionEditor({ section, contentItems, onCreate, 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
     title: '', body: '', tags: '', fields: {}, mode: 'classic', blocks: [],
-  });
-
-  const sortedItems = [...contentItems].sort((a, b) => {
-    const dateA = a.published_at || a.created_at;
-    const dateB = b.published_at || b.created_at;
-    return new Date(dateB).getTime() - new Date(dateA).getTime();
   });
 
   const currentBlocks = (editForm.fields?.blocks as Block[]) || editForm.blocks || [];
@@ -160,14 +155,17 @@ export default function ArticleSectionEditor({ section, contentItems, onCreate, 
         <button onClick={handleAdd} className="px-4 py-1.5 text-sm bg-[#2d2a24] text-white rounded-lg hover:bg-[#4a443c]">+ 写新文章</button>
       </div>
 
-      <div className="space-y-3">
-        {sortedItems.map(item => {
+      <SortableList
+        items={contentItems}
+        onPersist={(id, patch) => onSave(id, patch)}
+        className="space-y-3"
+        renderItem={(item) => {
           const fields = item.fields || {};
           const isEditing = editingId === item.id;
 
           if (isEditing) {
             return (
-              <div key={item.id} className="bg-white rounded-xl p-5 border-2 border-[#d4a574] shadow-sm">
+              <div className="bg-white rounded-xl p-5 border-2 border-[#d4a574] shadow-sm">
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs text-[#8b8b8b] mb-1">文章标题</label>
@@ -251,7 +249,7 @@ export default function ArticleSectionEditor({ section, contentItems, onCreate, 
           }
 
           return (
-            <div key={item.id} className="bg-white rounded-xl p-4 border border-[#e8e4de] card-hover cursor-pointer" onClick={() => handleEdit(item)}>
+            <SortableItem item={item} onClick={() => handleEdit(item)}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -269,16 +267,16 @@ export default function ArticleSectionEditor({ section, contentItems, onCreate, 
                 </div>
                 <span className="text-xs text-[#b8b4ae]">编辑</span>
               </div>
-            </div>
+            </SortableItem>
           );
-        })}
+        }}
+      />
 
-        {sortedItems.length === 0 && (
+        {contentItems.length === 0 && (
           <div className="text-center py-12 text-[#b8b4ae] bg-white rounded-xl border border-[#e8e4de]">
             暂无文章，点击「写新文章」添加
           </div>
         )}
-      </div>
     </div>
   );
 }
