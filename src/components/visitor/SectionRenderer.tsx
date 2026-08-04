@@ -59,7 +59,7 @@ export default function SectionRenderer({ section, contentItems }: Props) {
       }}
     >
       <div
-        className="max-w-5xl mx-auto px-4 sm:px-6"
+        className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8"
         style={{ padding: style.padding || '64px 24px' }}
       >
         {/* 板块标题 */}
@@ -73,7 +73,9 @@ export default function SectionRenderer({ section, contentItems }: Props) {
         </div>
 
         {canvasData ? (
-          <CanvasRenderer nodes={canvasData} />
+          <div className="w-full">
+            <CanvasRenderer nodes={canvasData} />
+          </div>
         ) : freeLayout ? (
           <PageLayoutRenderer layout={freeLayout} />
         ) : hasGridLayout ? (

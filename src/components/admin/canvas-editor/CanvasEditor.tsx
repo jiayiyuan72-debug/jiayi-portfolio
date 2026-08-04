@@ -348,7 +348,7 @@ function findParentId(list: CanvasNode[], id: string): string | null {
 /** Root-level sortable wrapper with drag handle */
 function SortableRoot({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
+  const style: React.CSSProperties = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1, width: '100%', marginBottom: 8 };
   return (
     <div ref={setNodeRef} style={style} className="relative">
       <div {...attributes} {...listeners}

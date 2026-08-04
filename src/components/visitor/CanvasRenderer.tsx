@@ -8,7 +8,7 @@ interface Props {
 export default function CanvasRenderer({ nodes }: Props) {
   if (!Array.isArray(nodes)) return null;
   return (
-    <div>{nodes.map(n => <NodeRenderer key={n.id} node={n} />)}</div>
+    <div className="w-full">{nodes.map(n => <NodeRenderer key={n.id} node={n} />)}</div>
   );
 }
 
@@ -21,10 +21,10 @@ function NodeRenderer({ node }: { node: CanvasNode }) {
   const style: React.CSSProperties = {
     width: p.width || '100%',
     height: p.height === 'auto' ? undefined : p.height,
-    marginTop: p.marginTop,
-    marginRight: p.marginRight,
-    marginBottom: p.marginBottom,
-    marginLeft: p.marginLeft,
+    marginTop: p.marginTop ?? 0,
+    marginRight: p.marginRight ?? 0,
+    marginBottom: p.marginBottom ?? 12,
+    marginLeft: p.marginLeft ?? 0,
     padding: pad(p),
     background: p.bgColor || (node.type === 'section' ? '#faf9f6' : 'transparent'),
     borderRadius: p.borderRadius ?? 0,
@@ -34,7 +34,11 @@ function NodeRenderer({ node }: { node: CanvasNode }) {
   if (node.type === 'row') {
     return (
       <div style={{ ...style, display: 'flex', gap: p.gap ?? 12 }}>
-        {node.children.map(c => <NodeRenderer key={c.id} node={c} />)}
+        {node.children.map(c => (
+          <div key={c.id} style={{ flex: 1, minWidth: 0 }}>
+            <NodeRenderer node={c} />
+          </div>
+        ))}
       </div>
     );
   }

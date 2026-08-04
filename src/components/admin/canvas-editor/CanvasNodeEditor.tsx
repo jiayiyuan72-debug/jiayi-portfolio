@@ -43,7 +43,7 @@ export default function CanvasNodeEditor(props: Props) {
   const boxStyle: React.CSSProperties = {
     width: p.width || '100%',
     height: p.height === 'auto' ? undefined : p.height,
-    marginTop: p.marginTop, marginRight: p.marginRight, marginBottom: p.marginBottom, marginLeft: p.marginLeft,
+    marginTop: p.marginTop ?? 0, marginRight: p.marginRight ?? 0, marginBottom: p.marginBottom ?? 12, marginLeft: p.marginLeft ?? 0,
     padding: p.paddingTop != null ? `${p.paddingTop}px ${p.paddingRight ?? 0}px ${p.paddingBottom ?? 0}px ${p.paddingLeft ?? 0}px` : undefined,
     background: p.bgColor || (node.type === 'section' ? '#faf9f6' : node.type === 'card' ? '#ffffff' : 'transparent'),
     borderRadius: p.borderRadius ?? 0,
@@ -310,7 +310,7 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
   const style: React.CSSProperties = {
     width: p.width || '100%',
     height: p.height === 'auto' ? undefined : p.height,
-    marginTop: p.marginTop, marginRight: p.marginRight, marginBottom: p.marginBottom, marginLeft: p.marginLeft,
+    marginTop: p.marginTop ?? 0, marginRight: p.marginRight ?? 0, marginBottom: p.marginBottom ?? 12, marginLeft: p.marginLeft ?? 0,
     padding: p.paddingTop != null ? `${p.paddingTop}px ${p.paddingRight ?? 0}px ${p.paddingBottom ?? 0}px ${p.paddingLeft ?? 0}px` : undefined,
     background: p.bgColor || (node.type === 'section' ? '#faf9f6' : node.type === 'card' ? '#ffffff' : 'transparent'),
     borderRadius: p.borderRadius ?? 0,
