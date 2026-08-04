@@ -1,35 +1,43 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { CanvasNode, CANVAS_TYPE_LABELS } from '@/types/canvas';
+import { CanvasNode, CanvasType, CANVAS_TYPE_LABELS, LAYOUT_TYPES, canNest, CAN_NEST_IN } from '@/types/canvas';
 
-interface Props {
-  node: CanvasNode;
-  selected: boolean;
-  editing: boolean;
-  depth: number;
-  onSelect: () => void;
-  onEdit: (id: string) => void;
+interface NodeCallbacks {
+  onSelectId: (id: string) => void;
+  onEditId: (id: string) => void;
   onStopEdit: () => void;
   onUpdateContent: (id: string, patch: Record<string, any>) => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
-  onMoveOrder: (dir: -1 | 1) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
+  onMoveOrder: (id: string, dir: -1 | 1) => void;
   onPickImage: (id: string) => void;
   onPickGallery: (id: string) => void;
   onResize: (id: string, patch: { width?: string; height?: string }) => void;
+  onAddChild: (parentId: string, type: CanvasType) => void;
+}
+
+interface Props extends NodeCallbacks {
+  node: CanvasNode;
+  selectedId: string | null;
+  editingId: string | null;
+  depth: number;
+  preview: boolean;
 }
 
 const EDITABLE_TYPES = ['text', 'quote'];
 
-/** 单个容器节点：递归渲染；单击选中、双击编辑/传图；编辑态 contenteditable + 迷你工具栏 */
-export default function CanvasNodeEditor({ node, selected, editing, depth, onSelect, onEdit, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize }: Props) {
+/** Single canvas node: recursive render with proper child selection */
+export default function CanvasNodeEditor(props: Props) {
+  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild } = props;
+
   const p = node.props || {};
   const isEditable = EDITABLE_TYPES.includes(node.type);
   const isImage = node.type === 'image' || node.type === 'gallery';
+  const selected = !preview && node.id === selectedId;
+  const editing = !preview && node.id === editingId;
   const [showToolbar, setShowToolbar] = useState(false);
   const [resizeTip, setResizeTip] = useState<{ w: number; h: number } | null>(null);
-
   const boxRef = useRef<HTMLDivElement>(null);
 
   const boxStyle: React.CSSProperties = {
@@ -44,12 +52,12 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
   };
 
   const handleDoubleClick = () => {
-    if (isEditable) onEdit(node.id);
+    if (preview) return;
+    if (isEditable) onEditId(node.id);
     else if (node.type === 'image') onPickImage(node.id);
     else if (node.type === 'gallery') onPickGallery(node.id);
   };
 
-  // 缩放手柄（SE/S 角）：拖动更新宽高
   const startResize = (dir: 'se' | 's') => (e: React.PointerEvent) => {
     e.preventDefault(); e.stopPropagation();
     const startX = e.clientX, startY = e.clientY;
@@ -72,7 +80,6 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
     window.addEventListener('pointerup', up);
   };
 
-  // 编辑态：contenteditable
   const contentHtml = (node.content as any)?.html || '';
 
   const renderToolbar = () => (
@@ -89,93 +96,121 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
     </div>
   );
 
-  const enterEdit = () => { if (isEditable) onEdit(node.id); };
-  const hasEdit = isEditable || isImage;
-
   const SelectMenu = () => (
     <div className="absolute -top-8 right-0 z-30 flex items-center gap-0.5 bg-[#2d2a24] text-white text-[10px] rounded-lg px-1 py-0.5 shadow">
-      <button onClick={onDuplicate} className="px-1 hover:opacity-70" title="复制">⧉</button>
-      <button onClick={() => onMoveOrder(-1)} className="px-1 hover:opacity-70" title="上移">↑</button>
-      <button onClick={() => onMoveOrder(1)} className="px-1 hover:opacity-70" title="下移">↓</button>
-      <button onClick={onDelete} className="px-1 hover:opacity-70 text-red-300" title="删除">🗑</button>
+      <button onClick={(e) => { e.stopPropagation(); onDuplicate(node.id); }} className="px-1 hover:opacity-70" title="复制">⧉</button>
+      <button onClick={(e) => { e.stopPropagation(); onMoveOrder(node.id, -1); }} className="px-1 hover:opacity-70" title="上移">↑</button>
+      <button onClick={(e) => { e.stopPropagation(); onMoveOrder(node.id, 1); }} className="px-1 hover:opacity-70" title="下移">↓</button>
+      <button onClick={(e) => { e.stopPropagation(); onDelete(node.id); }} className="px-1 hover:opacity-70 text-red-300" title="删除">🗑</button>
     </div>
   );
 
-  // ---- 布局容器：行/列/卡片 ----
+  // Add-content bar for containers
+  const AddContentBar = () => {
+    if (preview || !selected || !LAYOUT_TYPES.includes(node.type)) return null;
+    const allowed = CAN_NEST_IN[node.type];
+    return (
+      <div className="mt-2 flex flex-wrap gap-1 border-t border-dashed border-[#d4a574] pt-2">
+        {allowed.map(t => (
+          <button key={t} onClick={(e) => { e.stopPropagation(); onAddChild(node.id, t); }}
+            className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">
+            {CANVAS_TYPE_LABELS[t].icon} {CANVAS_TYPE_LABELS[t].label}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  // Shared child props - key change: pass selectedId/editingId down so children can be selected
+  const childProps = (c: CanvasNode) => ({
+    key: c.id,
+    node: c,
+    selectedId,
+    editingId,
+    depth: depth + 1,
+    preview,
+    onSelectId,
+    onEditId,
+    onStopEdit,
+    onUpdateContent,
+    onDuplicate,
+    onDelete,
+    onMoveOrder,
+    onPickImage,
+    onPickGallery,
+    onResize,
+    onAddChild,
+  });
+
+  // ---- PREVIEW MODE: render real content without editing UI ----
+  if (preview) {
+    return <PreviewNode node={node} depth={depth} />;
+  }
+
+  // ---- Layout containers ----
   if (node.type === 'row') {
     return (
-      <div ref={boxRef} onClick={onSelect} onDoubleClick={handleDoubleClick}
-        className={`relative ${selected ? 'ring-2 ring-[#4a90e2] border-2 border-[#4a90e2]' : (editing ? 'border-2 border-dashed border-green-500' : 'border border-[#e8e4de]')} rounded bg-white/50`}
-        style={{ ...boxStyle, display: 'flex', gap: p.gap ?? 12 }}>
+      <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }} onDoubleClick={handleDoubleClick}
+        className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} rounded bg-white/50`}
+        style={{ ...boxStyle, display: 'flex', gap: p.gap ?? 12, marginBottom: p.marginBottom ?? 12 }}>
         {selected && <SelectMenu />}
-        {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-4">拖入「列」</div>}
-        {node.children.map((c, i) => (
+        {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-4 flex-1">选中后从下方添加「列」</div>}
+        {node.children.map(c => (
           <div key={c.id} style={{ flex: 1, minWidth: 0 }} className="relative">
-            <CanvasNodeEditor
-              node={c} selected={false} editing={editing} depth={depth + 1}
-              onSelect={onSelect} onEdit={onEdit} onStopEdit={onStopEdit} onUpdateContent={onUpdateContent}
-              onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} onResize={onResize}
-            />
+            <CanvasNodeEditor {...childProps(c)} />
           </div>
         ))}
+        <AddContentBar />
       </div>
     );
   }
 
   if (node.type === 'column') {
     return (
-      <div ref={boxRef} onClick={onSelect}
-        className={`relative ${selected ? 'ring-2 ring-[#4a90e2] border-2 border-[#4a90e2]' : 'border border-dashed border-[#d8d4cc]'} rounded`}
+      <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
+        className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-dashed border-[#d8d4cc] rounded`}
         style={{ ...boxStyle, minHeight: 40, display: 'flex', flexDirection: 'column', justifyContent: p.valign || 'top', gap: 4 }}>
-        {node.children.map(c => (
-          <CanvasNodeEditor key={c.id} node={c} selected={false} editing={editing} depth={depth + 1}
-            onSelect={onSelect} onEdit={onEdit} onStopEdit={onStopEdit} onUpdateContent={onUpdateContent}
-            onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} onResize={onResize} />
-        ))}
-        {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-3">拖入内容</div>}
+        {selected && <SelectMenu />}
+        {node.children.map(c => <CanvasNodeEditor {...childProps(c)} />)}
+        {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-3">选中后添加内容</div>}
+        <AddContentBar />
       </div>
     );
   }
 
   if (node.type === 'card') {
     return (
-      <div ref={boxRef} onClick={onSelect}
-        className={`relative ${selected ? 'ring-2 ring-[#4a90e2] border-2 border-[#4a90e2]' : 'border border-[#e8e6e0]'} rounded bg-white`}
+      <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
+        className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-[#e8e6e0] rounded bg-white`}
         style={{ ...boxStyle, boxShadow: { none: 'none', sm: '0 1px 2px rgba(0,0,0,.05)', md: '0 2px 8px rgba(0,0,0,.08)', lg: '0 4px 16px rgba(0,0,0,.1)' }[p.shadow || 'sm'] }}>
-        {node.children.map(c => (
-          <CanvasNodeEditor key={c.id} node={c} selected={false} editing={editing} depth={depth + 1}
-            onSelect={onSelect} onEdit={onEdit} onStopEdit={onStopEdit} onUpdateContent={onUpdateContent}
-            onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} onResize={onResize} />
-        ))}
-        {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-3 py-4">卡片内容</div>}
+        {selected && <SelectMenu />}
+        {node.children.map(c => <CanvasNodeEditor {...childProps(c)} />)}
+        {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-3 py-4">卡片内容（选中后添加）</div>}
+        <AddContentBar />
       </div>
     );
   }
 
-  // ---- 区块 ----
   if (node.type === 'section') {
     return (
-      <section ref={boxRef} onClick={onSelect}
-        className={`relative ${selected ? 'ring-2 ring-[#4a90e2] border-2 border-[#4a90e2]' : 'border border-[#e8e4de]'} rounded`}
+      <section ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
+        className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-[#e8e4de] rounded`}
         style={boxStyle}>
+        {selected && <SelectMenu />}
         <div className="flex items-center justify-between mb-2">
           {(node.content as any)?.showTitle !== false && (
             <span className="text-sm font-semibold text-[#2d2a24]">{((node.content as any)?.title) || '区块'}</span>
           )}
           <span className="text-[10px] text-[#b8b4ae]">{CANVAS_TYPE_LABELS[node.type].label}</span>
         </div>
-        {node.children.map(c => (
-          <CanvasNodeEditor key={c.id} node={c} selected={false} editing={editing} depth={depth + 1}
-            onSelect={onSelect} onEdit={onEdit} onStopEdit={onStopEdit} onUpdateContent={onUpdateContent}
-            onDuplicate={onDuplicate} onDelete={onDelete} onMoveOrder={onMoveOrder} onPickImage={onPickImage} onPickGallery={onPickGallery} onResize={onResize} />
-        ))}
-        {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] py-4">拖入内容</div>}
-        {selected ? <SelectMenu /> : editing ? renderToolbar() : null}
+        {node.children.map(c => <CanvasNodeEditor {...childProps(c)} />)}
+        {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] py-4">选中后从下方添加内容</div>}
+        <AddContentBar />
       </section>
     );
   }
 
-  // ---- 叶子 / 内容容器 ----
+  // ---- Leaf nodes ----
   const leafStyle: React.CSSProperties = {
     ...boxStyle,
     position: 'relative',
@@ -184,22 +219,22 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
   };
 
   return (
-    <div ref={boxRef} onClick={onSelect} onDoubleClick={handleDoubleClick}
-      className={`relative ${selected && selected ? 'ring-1 ring-[#4a90e2] border border-[#4a90e2]' : 'border border-[#e8e4de] hover:border-[#4a90e2]/50 rounded'} rounded`}
+    <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }} onDoubleClick={handleDoubleClick}
+      className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'border border-transparent hover:border-[#4a90e2]/40 hover:ring-1 hover:ring-[#4a90e2]/30'} rounded`}
       style={leafStyle}
       onMouseEnter={() => setShowToolbar(true)} onMouseLeave={() => setShowToolbar(false)}
     >
-      {/* 内容渲染 + 编辑态 */}
-      {node.type === 'text' || node.type === 'quote' ? (
-        node.type === 'quote'
-          ? <div className={`border-l-4 border-[#d4a574] bg-[#f8f5f0] px-3 py-2 ${editing ? 'outline-none' : ''}`}
-              contentEditable={editing || undefined} suppressContentEditableWarning
-              onBlur={(e) => { onUpdateContent(node.id, { html: e.currentTarget.innerHTML }); onStopEdit(); }}
-              dangerouslySetInnerHTML={{ __html: editing ? '' : contentHtml }} />
-          : <div className={`text-sm lead-1.7 ${editing ? 'outline-none' : ''}`} style={{ lineHeight: 1.7 }}
-              contentEditable={editing || undefined} suppressContentEditableWarning
-              onBlur={(e) => { onUpdateContent(node.id, { html: e.currentTarget.innerHTML }); onStopEdit(); }}
-              dangerouslySetInnerHTML={{ __html: editing ? '' : contentHtml }} />
+      {/* Content rendering */}
+      {node.type === 'text' ? (
+        <div className={`text-sm ${editing ? 'outline-none ring-1 ring-green-400' : ''}`} style={{ lineHeight: 1.7 }}
+          contentEditable={editing || undefined} suppressContentEditableWarning
+          onBlur={(e) => { onUpdateContent(node.id, { html: e.currentTarget.innerHTML }); onStopEdit(); }}
+          dangerouslySetInnerHTML={{ __html: editing ? contentHtml : contentHtml }} />
+      ) : node.type === 'quote' ? (
+        <div className={`border-l-4 border-[#d4a574] bg-[#f8f5f0] px-3 py-2 text-sm ${editing ? 'outline-none ring-1 ring-green-400' : ''}`} style={{ lineHeight: 1.7 }}
+          contentEditable={editing || undefined} suppressContentEditableWarning
+          onBlur={(e) => { onUpdateContent(node.id, { html: e.currentTarget.innerHTML }); onStopEdit(); }}
+          dangerouslySetInnerHTML={{ __html: contentHtml }} />
       ) : node.type === 'image' ? (
         (node.content as any)?.src
           ? <div className="relative">
@@ -211,33 +246,25 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
                   maxWidth: (node.content as any).fitMode === 'original' ? '100%' : undefined,
                   height: (node.content as any).fitMode === 'cover' ? '100%' : 'auto',
                   objectFit: (node.content as any).fitMode === 'cover' ? 'cover' : undefined,
-                  aspectRatio: (node.content as any).fitMode === 'cover' ? undefined : 'auto',
                 }} />
               {(node.content as any).caption && <div className="text-xs text-[#b8b4ae] text-center mt-1">{(node.content as any).caption}</div>}
             </div>
-          : <div className="text-xs text-[#b8b4ae] py-4 text-center">双击上传图片</div>
+          : <div className="text-xs text-[#b8b4ae] py-4 text-center cursor-pointer" onClick={(e) => { e.stopPropagation(); onPickImage(node.id); }}>双击或点击上传图片</div>
       ) : node.type === 'gallery' ? (
-        <div className="text-xs text-[#b8b4ae] py-4 text-center">双击管理图片组</div>
+        <GalleryPreview node={node} onPickGallery={onPickGallery} />
       ) : node.type === 'divider' ? (
         <hr style={{ border: 'none', borderTop: `${p.lineWidth ?? 1}px solid ${p.lineColor || '#e8e6e0'}` }} />
       ) : node.type === 'spacer' ? (
         <div style={{ height: p.height || '24px' }} />
       ) : null}
 
-      {/* 迷你工具栏（text/quote 编辑态 或 hover） */}
+      {/* Mini toolbar */}
       {(editing && isEditable) || (selected && showToolbar && (isEditable || isImage)) ? renderToolbar() : null}
 
-      {/* 选中工具条 */}
-      {selected && (
-        <div className="absolute -top-8 right-0 z-20 flex items-center gap-0.5 bg-[#2d2a24] text-white text-[10px] rounded-lg px-1 py-0.5 shadow">
-          <button onClick={onDuplicate} className="px-1 hover:opacity-70" title="复制 ⏎⏎">⧉</button>
-          <button onClick={() => onMoveOrder(-1)} className="px-1 hover:opacity-70" title="上移">↑</button>
-          <button onClick={() => onMoveOrder(1)} className="px-1 hover:opacity-70" title="下移">↓</button>
-          <button onClick={onDelete} className="px-1 hover:opacity-70 text-red-300" title="删除">🗑</button>
-        </div>
-      )}
+      {/* Selection menu */}
+      {selected && <SelectMenu />}
 
-      {/* 缩放手柄（选中时显示） */}
+      {/* Resize handles */}
       {selected && !isEditable && node.type !== 'spacer' && node.type !== 'divider' && (
         <>
           <div onPointerDown={startResize('se')} title="缩放"
@@ -247,7 +274,7 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
         </>
       )}
 
-      {/* 尺寸 tooltip */}
+      {/* Size tooltip */}
       {resizeTip && (
         <div className="absolute -bottom-7 right-0 z-30 bg-black/80 text-white text-[10px] rounded px-1.5 py-0.5 pointer-events-none">
           {resizeTip.w} × {resizeTip.h} px
@@ -257,3 +284,124 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
   );
 }
 
+/** Gallery preview component */
+function GalleryPreview({ node, onPickGallery }: { node: CanvasNode; onPickGallery: (id: string) => void }) {
+  const c = node.content as any;
+  const imgs = c?.images || [];
+  const cols = c?.columns || 3;
+  if (imgs.length === 0) {
+    return <div className="text-xs text-[#b8b4ae] py-4 text-center cursor-pointer" onClick={(e) => { e.stopPropagation(); onPickGallery(node.id); }}>双击或点击管理图片组</div>;
+  }
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: c?.gap ?? 8 }}>
+      {imgs.map((img: any, i: number) => (
+        <div key={i} className="bg-[#f5f5f0] rounded overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={img.src || img} className="w-full object-cover" style={{ aspectRatio: '1/1' }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Preview mode: render content as visitors see it (no editing UI) */
+function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
+  const p = node.props || {};
+  const style: React.CSSProperties = {
+    width: p.width || '100%',
+    height: p.height === 'auto' ? undefined : p.height,
+    marginTop: p.marginTop, marginRight: p.marginRight, marginBottom: p.marginBottom, marginLeft: p.marginLeft,
+    padding: p.paddingTop != null ? `${p.paddingTop}px ${p.paddingRight ?? 0}px ${p.paddingBottom ?? 0}px ${p.paddingLeft ?? 0}px` : undefined,
+    background: p.bgColor || (node.type === 'section' ? '#faf9f6' : node.type === 'card' ? '#ffffff' : 'transparent'),
+    borderRadius: p.borderRadius ?? 0,
+    boxSizing: 'border-box',
+    textAlign: 'left',
+  };
+
+  if (node.type === 'row') {
+    return (
+      <div style={{ ...style, display: 'flex', gap: p.gap ?? 12 }}>
+        {node.children.map(c => <PreviewNode key={c.id} node={c} depth={depth + 1} />)}
+      </div>
+    );
+  }
+  if (node.type === 'column') {
+    return (
+      <div style={{ ...style, display: 'flex', flexDirection: 'column', justifyContent: p.valign || 'top' }}>
+        {node.children.map(c => <PreviewNode key={c.id} node={c} depth={depth + 1} />)}
+      </div>
+    );
+  }
+  if (node.type === 'section') {
+    return (
+      <div style={style}>
+        {node.content?.showTitle !== false && node.content?.title && (
+          <h3 className="text-lg font-semibold text-[#2d2a24] mb-3">{node.content.title}</h3>
+        )}
+        {node.children.map(c => <PreviewNode key={c.id} node={c} depth={depth + 1} />)}
+      </div>
+    );
+  }
+  if (node.type === 'card') {
+    const shadow = { none: 'none', sm: '0 1px 2px rgba(0,0,0,.05)', md: '0 2px 8px rgba(0,0,0,.08)', lg: '0 4px 16px rgba(0,0,0,.1)' }[p.shadow || 'sm'];
+    return (
+      <div style={{ ...style, boxShadow: shadow, border: p.borderColor ? `1px solid ${p.borderColor}` : '1px solid #e8e6e0' }}>
+        {node.children.map(c => <PreviewNode key={c.id} node={c} depth={depth + 1} />)}
+      </div>
+    );
+  }
+
+  // Leaf nodes in preview
+  switch (node.type) {
+    case 'text':
+    case 'quote': {
+      const isQuote = node.type === 'quote';
+      return (
+        <div
+          style={{ ...style, borderLeft: isQuote ? '4px solid #d4a574' : undefined, background: isQuote ? '#f8f5f0' : undefined, lineHeight: 1.7 }}
+          className="text-sm text-[#5a5349]"
+          dangerouslySetInnerHTML={{ __html: (node.content as any)?.html || '' }}
+        />
+      );
+    }
+    case 'image': {
+      const c = node.content as any;
+      if (!c?.src) return <div style={{ ...style, minHeight: 40, background: '#f5f5f0' }} />;
+      return (
+        <div style={style}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={c.src} alt={c.alt || ''}
+            style={{
+              width: c.fitMode === 'original' ? undefined : '100%',
+              maxWidth: c.fitMode === 'original' ? '100%' : undefined,
+              height: c.fitMode === 'cover' ? '100%' : 'auto',
+              objectFit: c.fitMode === 'cover' ? 'cover' : undefined,
+              borderRadius: p.borderRadius ?? 0,
+            }} />
+          {c.caption && <div className="text-xs text-[#b8b4ae] mt-1 text-center">{c.caption}</div>}
+        </div>
+      );
+    }
+    case 'gallery': {
+      const c = node.content as any;
+      const cols = c?.columns || 3;
+      const imgs = c?.images || [];
+      return (
+        <div style={{ ...style, display: 'grid', gridTemplateColumns: `repeat(${cols},1fr)`, gap: c?.gap ?? 8 }}>
+          {imgs.map((img: any, i: number) => (
+            <div key={i} className="bg-[#f5f5f0] rounded overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={img.src || img} className="w-full object-cover" style={{ aspectRatio: '1/1' }} />
+            </div>
+          ))}
+        </div>
+      );
+    }
+    case 'divider':
+      return <hr style={{ ...style, border: 'none', borderTop: `${p.lineWidth ?? 1}px solid ${p.lineColor || '#e8e6e0'}` }} />;
+    case 'spacer':
+      return <div style={{ ...style, height: p.height || '24px' }} />;
+    default:
+      return <div style={style} />;
+  }
+}

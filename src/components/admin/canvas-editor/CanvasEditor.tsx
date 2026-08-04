@@ -7,7 +7,8 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CanvasNode, CanvasType, defaultCanvasNode } from '@/types/canvas';
+import { CanvasNode, CanvasType, defaultCanvasNode, LAYOUT_TYPES, canNest } from '@/types/canvas';
+import { Section } from '@/types/section';
 import ComponentPalette from './ComponentPalette';
 import CanvasNodeEditor from './CanvasNodeEditor';
 import PropertyPanel from './PropertyPanel';
@@ -15,12 +16,17 @@ import PropertyPanel from './PropertyPanel';
 interface Props {
   trees: CanvasNode[];
   onSave: (trees: CanvasNode[]) => void;
-  onExit: () => void;
+  sectionName: string;
+  sectionId: string;
+  section: Section;
+  onSectionUpdate: (updated: Partial<Section>) => void;
+  onSectionSave: (updated: Partial<Section>) => void;
+  saving: boolean;
 }
 
 const MAX_HISTORY = 50;
 
-// ---- 纯树工具（不可变更新）----
+// ---- Tree utils (immutable) ----
 function mapTree(list: CanvasNode[], fn: (n: CanvasNode) => CanvasNode): CanvasNode[] {
   return list.map(n => ({ ...fn(n), children: mapTree(n.children, fn) }));
 }
@@ -40,8 +46,16 @@ function removeNode(list: CanvasNode[], id: string): CanvasNode[] {
   return list.filter(n => n.id !== id).map(n => ({ ...n, children: removeNode(n.children, id) }));
 }
 
-/** 画布编辑器：三栏 + 树状态 + 拖放 + 选中/编辑 + 撤销重做 + 预览/设备 + 保存 */
-export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Props) {
+/** Add a child node to a parent container (by parent ID). If parentId is null, add to root. */
+function addChild(list: CanvasNode[], parentId: string | null, child: CanvasNode): CanvasNode[] {
+  if (!parentId) return [...list, child];
+  return list.map(n => {
+    if (n.id === parentId) return { ...n, children: [...n.children, child] };
+    return { ...n, children: addChild(n.children, parentId, child) };
+  });
+}
+
+export default function CanvasEditor({ trees: initialTrees, onSave, sectionName, section, onSectionUpdate, onSectionSave, saving }: Props) {
   const [trees, setTrees] = useState<CanvasNode[]>(() => JSON.parse(JSON.stringify(initialTrees || [])));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -74,41 +88,66 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
     setSelectedId(null); setEditingId(null);
   };
 
-  // ---- 拖放创建：优先指针式（可靠），HTML5 作兜底 ----
+  // ---- Add component: to selected container or root ----
   const dragTypeRef = useRef<CanvasType | null>(null);
 
-  const onPointerStart = (type: CanvasType) => (e: React.PointerEvent) => {
-    e.preventDefault();
-    dragTypeRef.current = type;
-    const move = (ev: PointerEvent) => {
-      // 跟踪，可加 ghost 指示（此处最小实现：进入画板即高亮）
-    };
-    window.addEventListener('pointermove', move);
-    const up = (ev: PointerEvent) => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      endPointerDrag(ev);
-    };
-    window.addEventListener('pointerup', up);
-  };
-
-  const endPointerDrag = (e: PointerEvent) => {
-    const type = dragTypeRef.current;
-    dragTypeRef.current = null;
-    if (!type) return;
+  const addComponent = (type: CanvasType) => {
     const node = defaultCanvasNode(type);
-    // 单击组件或拖到画板附近 → 追加到根级（点击/拖拽都能添加）
-    setTree([...trees, node]);
+
+    // If a layout container is selected, add as its child
+    const sel = selectedId ? findNode(trees, selectedId) : null;
+    if (sel && LAYOUT_TYPES.includes(sel.type) && canNest(sel, type)) {
+      setTree(addChild(trees, selectedId!, node));
+    } else if (sel) {
+      // If a leaf is selected, add as sibling in its parent
+      const parent = findParent(trees, selectedId!);
+      if (parent) {
+        const parentId = findParentId(trees, selectedId!);
+        setTree(addChild(trees, parentId, node));
+      } else {
+        setTree([...trees, node]);
+      }
+    } else {
+      // No selection: add to root
+      setTree([...trees, node]);
+    }
+
     setSelectedId(node.id);
     if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
   };
 
-  // 缩放手柄更新节点宽高
+  const onPointerStart = (type: CanvasType) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    dragTypeRef.current = type;
+    const move = () => {};
+    window.addEventListener('pointermove', move);
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      if (dragTypeRef.current) {
+        addComponent(dragTypeRef.current);
+        dragTypeRef.current = null;
+      }
+    };
+    window.addEventListener('pointerup', up);
+  };
+
+  // HTML5 drag fallback
+  const onDragStart = (type: CanvasType) => (e: React.DragEvent) => e.dataTransfer.setData('application/x-canvas-type', type);
+  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('application/x-canvas-type') as CanvasType;
+    if (!type) return;
+    addComponent(type);
+  };
+
+  // Resize node
   const onResizeNode = (id: string, patch: { width?: string; height?: string }) => {
     setTree(mapTree(trees, n => n.id === id ? { ...n, props: { ...n.props, ...patch } } : n));
   };
 
-  // 根级容器拖拽换位（P0-6 面板容器可移动）
+  // Root-level drag reorder
   const rootDragSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -126,30 +165,15 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
     setTree(next, false);
   };
 
-  // HTML5 兜底
-  const onDragStart = (type: CanvasType) => (e: React.DragEvent) => e.dataTransfer.setData('application/x-canvas-type', type);
-  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const type = e.dataTransfer.getData('application/x-canvas-type') as CanvasType;
-    if (!type || !['section','row','column','card','text','image','quote','divider','spacer','gallery'].includes(type)) return;
-    const node = defaultCanvasNode(type);
-    setTree([...trees, node]);
-    setSelectedId(node.id);
-    if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
-  };
-
   const selected = selectedId ? findNode(trees, selectedId) : null;
 
-  const selectContainer = (id: string) => { setSelectedId(id); setEditingId(null); };
+  const selectNode = (id: string) => { setSelectedId(id); setEditingId(null); };
   const startEdit = (id: string) => { setEditingId(id); setSelectedId(id); };
   const stopEdit = () => setEditingId(null);
 
-  // 更新 content（就地编辑/图片上传/面板）
   const updateContent = (id: string, patch: Record<string, any>) => {
     setTree(mapTree(trees, n => n.id === id ? { ...n, content: { ...(n.content || {}), ...patch } } : n));
   };
-  // 更新节点整体（属性面板用）
   const updateNode = (id: string, node: CanvasNode) => {
     setTree(mapTree(trees, n => n.id === id ? node : n));
   };
@@ -183,12 +207,11 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
     setTree(applyParent(trees));
   };
 
-  // ---- 图片上传 ----
+  // ---- Image upload ----
   const pickImage = (id: string) => { setUploadTarget(id); fileRef.current?.click(); };
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !uploadTarget) return;
     try {
-      // 大图先压缩再传，避免撞 Vercel 函数请求体上限(~4.5MB)而报 pattern 错误
       let blob: Blob = file;
       if (file.type.startsWith('image/') && file.size > 1.5 * 1024 * 1024) {
         const b = await compressFile(file);
@@ -210,7 +233,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
     finally { setUploadTarget(null); if (fileRef.current) fileRef.current.value = ''; }
   };
 
-  // ---- 快捷键 ----
+  // ---- Keyboard shortcuts ----
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const c = e.metaKey || e.ctrlKey;
@@ -236,30 +259,51 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
 
   const boardW = mobile ? 375 : 960;
 
+  // Callbacks passed to CanvasNodeEditor (stable references via useCallback)
+  const nodeCallbacks = {
+    onSelectId: selectNode,
+    onEditId: startEdit,
+    onStopEdit: stopEdit,
+    onUpdateContent: updateContent,
+    onDuplicate: duplicate,
+    onDelete: del,
+    onMoveOrder: moveOrder,
+    onPickImage: pickImage,
+    onPickGallery: pickImage,
+    onResize: onResizeNode,
+    onAddChild: (parentId: string, type: CanvasType) => {
+      const node = defaultCanvasNode(type);
+      setTree(addChild(trees, parentId, node));
+      setSelectedId(node.id);
+      if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
+    },
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#eceae4]">
-      {/* 顶部工具栏 */}
-      <div className="flex items-center gap-2 bg-white border-b border-[#e8e4de] px-3 py-2">
-        <span className="font-semibold text-sm text-[#2d2a24]">🎨 容器编辑器</span>
+      {/* Top toolbar */}
+      <div className="flex items-center gap-2 bg-white border-b border-[#e8e4de] px-3 py-2 flex-shrink-0">
+        <span className="font-semibold text-sm text-[#2d2a24]">{sectionName}</span>
         <span className="mx-1 w-px h-5 bg-[#e8e4de]" />
-        <button onClick={() => setMobile(false)} className={`px-2 py-1 text-xs rounded ${!mobile ? 'bg-[#2d2a24] text-white' : 'bg-[#f2f0ec]'}`}>🖥 桌面</button>
-        <button onClick={() => setMobile(true)} className={`px-2 py-1 text-xs rounded ${mobile ? 'bg-[#2d2a24] text-white' : 'bg-[#f2f0ec]'}`}>📱 手机</button>
+        <button onClick={() => setMobile(false)} className={`px-2 py-1 text-xs rounded ${!mobile ? 'bg-[#2d2a24] text-white' : 'bg-[#f2f0ec]'}`}>桌面</button>
+        <button onClick={() => setMobile(true)} className={`px-2 py-1 text-xs rounded ${mobile ? 'bg-[#2d2a24] text-white' : 'bg-[#f2f0ec]'}`}>手机</button>
         <span className="mx-1 w-px h-5 bg-[#e8e4de]" />
-        <button onClick={() => setPreview(!preview)} className={`px-2 py-1 text-xs rounded ${preview ? 'bg-[#2d2a24] text-white' : 'bg-[#f2f0ec]'}`}>{preview ? '🔍 预览' : '✏️ 编辑'}</button>
+        <button onClick={() => setPreview(!preview)} className={`px-2 py-1 text-xs rounded ${preview ? 'bg-[#2d2a24] text-white' : 'bg-[#f2f0ec]'}`}>{preview ? '预览中' : '编辑'}</button>
         <span className="mx-1 w-px h-5 bg-[#e8e4de]" />
-        <button onClick={undo} disabled={!pastRef.current.length} className="px-2 py-1 text-xs bg-[#f2f0ec] rounded disabled:opacity-40">↩ 撤销 {`${pastRef.current.length}/${MAX_HISTORY}`}</button>
-        <button onClick={redo} disabled={!futureRef.current.length} className="px-2 py-1 text-xs bg-[#f2f0ec] rounded disabled:opacity-40">↪ 重做</button>
+        <button onClick={undo} disabled={!pastRef.current.length} className="px-2 py-1 text-xs bg-[#f2f0ec] rounded disabled:opacity-40">撤销</button>
+        <button onClick={redo} disabled={!futureRef.current.length} className="px-2 py-1 text-xs bg-[#f2f0ec] rounded disabled:opacity-40">重做</button>
         <div className="flex-1" />
-        <button onClick={() => { navigator.clipboard?.writeText(JSON.stringify(trees, null, 2)); toast.success('已复制 JSON'); }} className="px-2 py-1 text-xs bg-[#f2f0ec] rounded">导出 JSON</button>
+        {saving && <span className="text-xs text-[#8b8b8b]">保存中...</span>}
         <button onClick={save} className="px-3 py-1 text-xs bg-[#2d2a24] text-white rounded">保存</button>
-        <button onClick={() => { save(); onExit(); }} className="px-3 py-1 text-xs bg-[#d4a574] text-white rounded">保存并退出</button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        <ComponentPalette onDragStart={onDragStart} onPointerStart={onPointerStart} />
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        {!preview && (
+          <ComponentPalette onDragStart={onDragStart} onPointerStart={onPointerStart} />
+        )}
 
-        {/* 画板 */}
-        <div className="flex-1 overflow-auto p-4">
+        {/* Canvas */}
+        <div className="flex-1 overflow-auto p-4 min-w-0">
           <div
             ref={canvasRef}
             onDragOver={onDragOver}
@@ -268,7 +312,10 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
             style={{ width: boardW, maxWidth: '100%', minHeight: 400, padding: 24, boxSizing: 'border-box' }}
           >
             {trees.length === 0 && !preview && (
-              <div className="text-center text-sm text-[#b8b4ae] py-20">从左侧拖入组件开始编辑</div>
+              <div className="text-center text-sm text-[#b8b4ae] py-20">
+                从左侧拖入或点击组件开始编辑
+                <div className="mt-2 text-xs">选中容器后添加的内容会放入该容器内</div>
+              </div>
             )}
             <DndContext sensors={rootDragSensors} collisionDetection={closestCenter} onDragEnd={handleRootDragEnd}>
               <SortableContext items={trees.map(n => n.id)}>
@@ -276,19 +323,11 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
                   <SortableRoot key={n.id} id={n.id}>
                     <CanvasNodeEditor
                       node={n}
-                      selected={n.id === selectedId}
-                      editing={n.id === editingId}
+                      selectedId={selectedId}
+                      editingId={editingId}
                       depth={1}
-                      onSelect={() => selectContainer(n.id)}
-                      onEdit={startEdit}
-                      onStopEdit={stopEdit}
-                      onUpdateContent={updateContent}
-                      onDuplicate={() => duplicate(n.id)}
-                      onDelete={() => del(n.id)}
-                      onMoveOrder={(d) => moveOrder(n.id, d)}
-                      onPickImage={pickImage}
-                      onPickGallery={pickImage}
-                      onResize={onResizeNode}
+                      preview={preview}
+                      {...nodeCallbacks}
                     />
                   </SortableRoot>
                 ))}
@@ -298,7 +337,15 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
         </div>
 
         {!preview && (
-          <PropertyPanel node={selected} onChange={(node) => selectedId && updateNode(selectedId, node as CanvasNode)} onContentChange={(patch) => selectedId && updateContent(selectedId, patch)} onExit={() => setSelectedId(null)} />
+          <PropertyPanel
+            node={selected}
+            section={section}
+            onSectionUpdate={onSectionUpdate}
+            onSectionSave={onSectionSave}
+            onChange={(node) => selectedId && updateNode(selectedId, node as CanvasNode)}
+            onContentChange={(patch) => selectedId && updateContent(selectedId, patch)}
+            onExit={() => setSelectedId(null)}
+          />
         )}
       </div>
 
@@ -307,15 +354,24 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
   );
 }
 
-/** 根级容器拖拽的可排序包装（提供拖拽手柄 + transform 反馈） */
+/** Find the parent ID of a node (returns null for root-level nodes) */
+function findParentId(list: CanvasNode[], id: string): string | null {
+  for (const n of list) {
+    if (n.children.some(c => c.id === id)) return n.id;
+    const f = findParentId(n.children, id);
+    if (f) return f;
+  }
+  return null;
+}
+
+/** Root-level sortable wrapper with drag handle */
 function SortableRoot({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
   return (
     <div ref={setNodeRef} style={style} className="relative">
-      {/* 拖拽手柄：仅此区域触发移动 */}
       <div {...attributes} {...listeners}
-        className="absolute -top-2 -left-2 z-20 w-4 h-4 rounded bg-[#4a90e2] text-white flex items-center justify-center cursor-grab hover:scale-110 text-xs select-none"
+        className="absolute -top-2 -left-2 z-20 w-5 h-5 rounded bg-[#4a90e2] text-white flex items-center justify-center cursor-grab hover:scale-110 text-xs select-none"
         title="拖动移动容器">
         ⠿
       </div>
@@ -324,7 +380,7 @@ function SortableRoot({ id, children }: { id: string; children: React.ReactNode 
   );
 }
 
-/** 轻量图片压缩（canvas）—— 大图上传前压小，避免 Vercel 请求体上限 */
+/** Lightweight image compression (canvas) — compress before upload to avoid Vercel body limit */
 async function compressFile(file: File): Promise<Blob | null> {
   try {
     const url = URL.createObjectURL(file);
