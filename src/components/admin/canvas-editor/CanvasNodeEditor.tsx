@@ -152,14 +152,18 @@ export default function CanvasNodeEditor(props: Props) {
     return (
       <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }} onDoubleClick={handleDoubleClick}
         className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} rounded bg-white/50`}
-        style={{ ...boxStyle, display: 'flex', gap: p.gap ?? 12, marginBottom: p.marginBottom ?? 12 }}>
+        style={{ ...boxStyle, display: 'flex', flexWrap: p.responsiveStack !== false ? 'wrap' : 'nowrap', gap: p.gap ?? 16, alignItems: p.alignItems || 'stretch', marginBottom: p.marginBottom ?? 12 }}>
         {selected && <SelectMenu />}
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-4 flex-1">选中后从下方添加「列」</div>}
-        {node.children.map(c => (
-          <div key={c.id} style={{ flex: 1, minWidth: 0 }} className="relative">
-            <CanvasNodeEditor {...childProps(c)} />
-          </div>
-        ))}
+                {node.children.map(c => {
+          const basis = c.props?.flexBasis || '1';
+          const flexVal = basis === 'auto' ? '0 0 auto' : `${basis} 1 200px`;
+          return (
+            <div key={c.id} style={{ flex: flexVal, minWidth: 0 }} className="relative">
+              <CanvasNodeEditor {...childProps(c)} />
+            </div>
+          );
+        })}
         <AddContentBar />
       </div>
     );
@@ -319,9 +323,18 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
   };
 
   if (node.type === 'row') {
+    const stack = p.responsiveStack !== false;
     return (
-      <div style={{ ...style, display: 'flex', gap: p.gap ?? 12 }}>
-        {node.children.map(c => <PreviewNode key={c.id} node={c} depth={depth + 1} />)}
+      <div style={{ ...style, display: 'flex', flexWrap: stack ? 'wrap' : 'nowrap', gap: p.gap ?? 16, alignItems: p.alignItems || 'stretch' }}>
+        {node.children.map(c => {
+          const cb = c.props?.flexBasis || '1';
+          const cf = cb === 'auto' ? '0 0 auto' : `${cb} 1 200px`;
+          return (
+            <div key={c.id} style={{ flex: cf, minWidth: stack ? 200 : 0, maxWidth: '100%' }}>
+              <PreviewNode node={c} depth={depth + 1} />
+            </div>
+          );
+        })}
       </div>
     );
   }

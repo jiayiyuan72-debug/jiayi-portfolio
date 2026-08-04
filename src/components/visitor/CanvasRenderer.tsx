@@ -4,7 +4,7 @@ interface Props {
   nodes: CanvasNode[];
 }
 
-/** 访客端：读 fields.canvas_data 递归渲染容器树（流式布局 + 自适应高度） */
+/** 访客端：读 fields.canvas_data 递归渲染容器树（流式布局 + 自适应高度 + 响应式） */
 export default function CanvasRenderer({ nodes }: Props) {
   if (!Array.isArray(nodes)) return null;
   return (
@@ -14,6 +14,13 @@ export default function CanvasRenderer({ nodes }: Props) {
 
 function pad(p: any) {
   return `${p.paddingTop ?? 0}px ${p.paddingRight ?? 0}px ${p.paddingBottom ?? 0}px ${p.paddingLeft ?? 0}px`;
+}
+
+/** 获取 column 的 flex 值，支持 flexBasis 比例 */
+function colFlex(p: any) {
+  const basis = p.flexBasis || '1';
+  if (basis === 'auto') return '0 0 auto';
+  return `${basis} 1 250px`;
 }
 
 function NodeRenderer({ node }: { node: CanvasNode }) {
@@ -32,10 +39,17 @@ function NodeRenderer({ node }: { node: CanvasNode }) {
     boxSizing: 'border-box',
   };
   if (node.type === 'row') {
+    const stack = p.responsiveStack !== false;
     return (
-      <div style={{ ...style, display: 'flex', gap: p.gap ?? 12 }}>
+      <div style={{
+        ...style,
+        display: 'flex',
+        flexWrap: stack ? 'wrap' : 'nowrap',
+        gap: p.gap ?? 16,
+        alignItems: p.alignItems || 'stretch',
+      }}>
         {node.children.map(c => (
-          <div key={c.id} style={{ flex: 1, minWidth: 0 }}>
+          <div key={c.id} style={{ flex: colFlex(c.props), minWidth: stack ? 200 : 0, maxWidth: '100%' }}>
             <NodeRenderer node={c} />
           </div>
         ))}
@@ -106,7 +120,7 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
       const cols = c?.columns || 3;
       const imgs = c?.images || [];
       return (
-        <div style={{ ...style, display: 'grid', gridTemplateColumns: `repeat(${cols},1fr)`, gap: c?.gap ?? 8 }}>
+        <div style={{ ...style, display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${Math.floor(100/cols)}%, 1fr))`, gap: c?.gap ?? 8 }}>
           {imgs.map((img: any, i: number) => (
             <div key={i} className="bg-[#f5f5f0] rounded overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}

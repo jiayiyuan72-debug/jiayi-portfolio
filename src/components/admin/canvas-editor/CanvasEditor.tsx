@@ -7,7 +7,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CanvasNode, CanvasType, defaultCanvasNode, LAYOUT_TYPES, canNest } from '@/types/canvas';
+import { CanvasNode, CanvasType, defaultCanvasNode, LAYOUT_TYPES, canNest, TemplateId, createTemplate } from '@/types/canvas';
 import { Section } from '@/types/section';
 import ComponentPalette from './ComponentPalette';
 import CanvasNodeEditor from './CanvasNodeEditor';
@@ -112,6 +112,19 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
 
     setSelectedId(node.id);
     if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
+  };
+
+  // HTML5 drag
+  // ---- Add preset template ----
+  const addTemplate = (templateId: TemplateId) => {
+    const node = createTemplate(templateId);
+    const sel = selectedId ? findNode(trees, selectedId) : null;
+    if (sel && LAYOUT_TYPES.includes(sel.type)) {
+      setTree(addChild(trees, selectedId!, node));
+    } else {
+      setTree([...trees, node]);
+    }
+    setSelectedId(null);
   };
 
   // HTML5 drag-and-drop on canvas (for future use)
@@ -280,7 +293,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         {!preview && (
-          <ComponentPalette onAddClick={addComponent} />
+          <ComponentPalette onAddClick={addComponent} onAddTemplate={addTemplate} />
         )}
 
         {/* Canvas */}

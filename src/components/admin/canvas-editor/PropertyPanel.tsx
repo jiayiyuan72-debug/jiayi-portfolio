@@ -104,13 +104,34 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
         {node.type === 'row' && (
           <Section title="行设置">
             <Field label="列间距">
-              <input type="number" value={p.gap ?? 12} onChange={(e) => set({ gap: Number(e.target.value) })} className={numCls} />
+              <input type="number" value={p.gap ?? 16} onChange={(e) => set({ gap: Number(e.target.value) })} className={numCls} />
+            </Field>
+            <Field label="垂直对齐">
+              <select value={p.alignItems || 'stretch'} onChange={(e) => set({ alignItems: e.target.value })} className={inputCls}>
+                <option value="stretch">等高拉伸</option>
+                <option value="start">顶部对齐</option>
+                <option value="center">垂直居中</option>
+                <option value="end">底部对齐</option>
+              </select>
+            </Field>
+            <Field label="移动端堆叠">
+              <Toggle value={p.responsiveStack !== false} onChange={(v) => set({ responsiveStack: v })} />
             </Field>
           </Section>
         )}
 
         {node.type === 'column' && (
           <Section title="列设置">
+            <Field label="宽度比例">
+              <select value={p.flexBasis || '1'} onChange={(e) => set({ flexBasis: e.target.value })} className={inputCls}>
+                <option value="1">标准 (1:1)</option>
+                <option value="2">加宽 (2:1)</option>
+                <option value="3">更宽 (3:1)</option>
+                <option value="0.5">窄列 (1:2)</option>
+                <option value="0.333">最窄 (1:3)</option>
+                <option value="auto">自适应</option>
+              </select>
+            </Field>
             <Field label="垂直对齐">
               <select value={p.valign || 'top'} onChange={(e) => set({ valign: e.target.value })} className={inputCls}>
                 <option value="top">顶部对齐</option>
