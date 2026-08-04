@@ -165,7 +165,13 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !uploadTarget) return;
     try {
-      const fd = new FormData(); fd.append('file', file);
+      // 大图先压缩再传，避免撞 Vercel 函数请求体上限(~4.5MB)而报 pattern 错误
+      let blob: Blob = file;
+      if (file.type.startsWith('image/') && file.size > 1.5 * 1024 * 1024) {
+        const b = await compressFile(file);
+        if (b && b.size > 0 && b.size < file.size) blob = b;
+      }
+      const fd = new FormData(); fd.append('file', blob, blob === file ? file.name : 'image.jpg');
       const res = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '上传失败');
@@ -271,4 +277,22 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
     </div>
   );
+}
+
+/** 轻量图片压缩（canvas）—— 大图上传前压小，避免 Vercel 请求体上限 */
+async function compressFile(file: File): Promise<Blob | null> {
+  try {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = url; });
+    const MAX = 1920;
+    let { width, height } = img;
+    if (width > MAX || height > MAX) { const s = MAX / Math.max(width, height); width = Math.round(width * s); height = Math.round(height * s); }
+    const cv = document.createElement('canvas'); cv.width = width; cv.height = height;
+    const ctx = cv.getContext('2d'); if (!ctx) return null;
+    ctx.drawImage(img, 0, 0, width, height);
+    const blob = await new Promise<Blob | null>(res => cv.toBlob(res, 'image/jpeg', 0.82));
+    URL.revokeObjectURL(url);
+    return blob;
+  } catch { return null; }
 }
