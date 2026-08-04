@@ -117,15 +117,17 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
   };
 
   const onPointerStart = (type: CanvasType) => (e: React.PointerEvent) => {
-    e.preventDefault();
     dragTypeRef.current = type;
-    const move = () => {};
+    let didMove = false;
+    const move = () => { didMove = true; };
     window.addEventListener('pointermove', move);
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      if (dragTypeRef.current) {
+      if (dragTypeRef.current && didMove) {
         addComponent(dragTypeRef.current);
+        dragTypeRef.current = null;
+      } else {
         dragTypeRef.current = null;
       }
     };
@@ -299,7 +301,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
 
       <div className="flex flex-1 overflow-hidden min-h-0">
         {!preview && (
-          <ComponentPalette onDragStart={onDragStart} onPointerStart={onPointerStart} />
+          <ComponentPalette onDragStart={onDragStart} onPointerStart={onPointerStart} onAddClick={addComponent} />
         )}
 
         {/* Canvas */}
