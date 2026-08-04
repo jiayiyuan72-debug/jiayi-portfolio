@@ -40,6 +40,27 @@ function EditorPageInner() {
 
   const selectedSection = sections.find(s => s.id === selectedSectionId) || null;
 
+  const MODE_KEY = 'editor-mode-by-section';
+  // 切换模式并记忆到 localStorage
+  const switchMode = (mode: 'form' | 'board') => {
+    setEditorMode(mode);
+    if (selectedSectionId) {
+      try {
+        const store = JSON.parse(localStorage.getItem(MODE_KEY) || '{}');
+        store[selectedSectionId] = mode;
+        localStorage.setItem(MODE_KEY, JSON.stringify(store));
+      } catch { /* ignore */ }
+    }
+  };
+  // 选中板块时恢复该板块上次用的模式（P1-7）
+  useEffect(() => {
+    if (!selectedSectionId) return;
+    try {
+      const store = JSON.parse(localStorage.getItem(MODE_KEY) || '{}');
+      if (store[selectedSectionId]) setEditorMode(store[selectedSectionId]);
+    } catch { /* ignore */ }
+  }, [selectedSectionId]);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -216,7 +237,7 @@ function EditorPageInner() {
             key={selectedSection.id}
             trees={getCanvasData()}
             onSave={saveCanvasData}
-            onExit={() => setEditorMode('form')}
+            onExit={() => switchMode('form')}
           />
         </div>
       );
@@ -357,7 +378,7 @@ function EditorPageInner() {
                 {/* 编辑模式切换（2 种：内容管理 / 可视化编辑） */}
                 <div className="flex items-center gap-1 bg-[#f8f5f0] border border-[#e8e4de] rounded-lg p-0.5">
                   <button
-                    onClick={() => setEditorMode('form')}
+                    onClick={() => switchMode('form')}
                     className={`px-2.5 py-1 rounded-md transition-colors ${
                       editorMode === 'form' ? 'bg-[#2d2a24] text-white' : 'text-[#5a5349]'
                     }`}
@@ -365,7 +386,7 @@ function EditorPageInner() {
                     📋 内容管理
                   </button>
                   <button
-                    onClick={() => setEditorMode('board')}
+                    onClick={() => switchMode('board')}
                     className={`px-2.5 py-1 rounded-md transition-colors ${
                       editorMode === 'board' ? 'bg-[#4a90e2] text-white' : 'text-[#5a5349]'
                     }`}

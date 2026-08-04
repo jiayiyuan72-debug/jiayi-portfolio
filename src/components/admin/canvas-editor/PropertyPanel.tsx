@@ -90,7 +90,15 @@ export default function PropertyPanel({ node, onChange, onContentChange, onExit 
         {node.type === 'image' && (
           <>
             <Field label="图片URL"><input value={(node.content as any)?.src || ''} onChange={(e) => onContentChange({ ...node.content, src: e.target.value })} className={num.className} /></Field>
+            <Field label="适配模式">
+              <select value={(node.content as any)?.fitMode || 'fit-width'} onChange={(e) => onContentChange({ ...node.content, fitMode: e.target.value })} className={num.className}>
+                <option value="fit-width">适应宽度</option>
+                <option value="original">原尺寸</option>
+                <option value="cover">填充裁切</option>
+              </select>
+            </Field>
             <Field label="caption"><input value={(node.content as any)?.caption || ''} onChange={(e) => onContentChange({ ...node.content, caption: e.target.value })} className={num.className} /></Field>
+            <Field label="Alt"><input value={(node.content as any)?.alt || ''} onChange={(e) => onContentChange({ ...node.content, alt: e.target.value })} className={num.className} /></Field>
           </>
         )}
       </div>

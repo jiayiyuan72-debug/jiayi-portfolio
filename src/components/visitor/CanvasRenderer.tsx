@@ -85,7 +85,14 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
       return (
         <div style={style}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={c.src} alt={c.alt || ''} className="w-full h-auto rounded" style={{ borderRadius: node.props.borderRadius ?? 0 }} />
+          <img src={c.src} alt={c.alt || ''}
+            style={{
+              width: c.fitMode === 'original' ? undefined : '100%',
+              maxWidth: c.fitMode === 'original' ? '100%' : undefined,
+              height: c.fitMode === 'cover' ? '100%' : 'auto',
+              objectFit: c.fitMode === 'cover' ? 'cover' : undefined,
+              borderRadius: node.props.borderRadius ?? 0,
+            }} />
           {c.caption && <div className="text-xs text-[#b8b4ae] mt-1 text-center">{c.caption}</div>}
         </div>
       );

@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import {
+  DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { CanvasNode, CanvasType, defaultCanvasNode } from '@/types/canvas';
 import ComponentPalette from './ComponentPalette';
 import CanvasNodeEditor from './CanvasNodeEditor';
@@ -101,6 +106,24 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
   // 缩放手柄更新节点宽高
   const onResizeNode = (id: string, patch: { width?: string; height?: string }) => {
     setTree(mapTree(trees, n => n.id === id ? { ...n, props: { ...n.props, ...patch } } : n));
+  };
+
+  // 根级容器拖拽换位（P0-6 面板容器可移动）
+  const rootDragSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+  const handleRootDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = trees.map(n => n.id);
+    const from = ids.indexOf(active.id as string);
+    const to = ids.indexOf(over.id as string);
+    if (from < 0 || to < 0) return;
+    const next = [...trees];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setTree(next, false);
   };
 
   // HTML5 兜底
@@ -247,25 +270,30 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
             {trees.length === 0 && !preview && (
               <div className="text-center text-sm text-[#b8b4ae] py-20">从左侧拖入组件开始编辑</div>
             )}
-            {trees.map(n => (
-              <CanvasNodeEditor
-                key={n.id}
-                node={n}
-                selected={n.id === selectedId}
-                editing={n.id === editingId}
-                depth={1}
-                onSelect={() => selectContainer(n.id)}
-                onEdit={startEdit}
-                onStopEdit={stopEdit}
-                onUpdateContent={updateContent}
-                onDuplicate={() => duplicate(n.id)}
-                onDelete={() => del(n.id)}
-                onMoveOrder={(d) => moveOrder(n.id, d)}
-                onPickImage={pickImage}
-                onPickGallery={pickImage}
-                onResize={onResizeNode}
-              />
-            ))}
+            <DndContext sensors={rootDragSensors} collisionDetection={closestCenter} onDragEnd={handleRootDragEnd}>
+              <SortableContext items={trees.map(n => n.id)}>
+                {trees.map(n => (
+                  <SortableRoot key={n.id} id={n.id}>
+                    <CanvasNodeEditor
+                      node={n}
+                      selected={n.id === selectedId}
+                      editing={n.id === editingId}
+                      depth={1}
+                      onSelect={() => selectContainer(n.id)}
+                      onEdit={startEdit}
+                      onStopEdit={stopEdit}
+                      onUpdateContent={updateContent}
+                      onDuplicate={() => duplicate(n.id)}
+                      onDelete={() => del(n.id)}
+                      onMoveOrder={(d) => moveOrder(n.id, d)}
+                      onPickImage={pickImage}
+                      onPickGallery={pickImage}
+                      onResize={onResizeNode}
+                    />
+                  </SortableRoot>
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         </div>
 
@@ -275,6 +303,23 @@ export default function CanvasEditor({ trees: initialTrees, onSave, onExit }: Pr
       </div>
 
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+    </div>
+  );
+}
+
+/** 根级容器拖拽的可排序包装（提供拖拽手柄 + transform 反馈） */
+function SortableRoot({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} className="relative">
+      {/* 拖拽手柄：仅此区域触发移动 */}
+      <div {...attributes} {...listeners}
+        className="absolute -top-2 -left-2 z-20 w-4 h-4 rounded bg-[#4a90e2] text-white flex items-center justify-center cursor-grab hover:scale-110 text-xs select-none"
+        title="拖动移动容器">
+        ⠿
+      </div>
+      {children}
     </div>
   );
 }

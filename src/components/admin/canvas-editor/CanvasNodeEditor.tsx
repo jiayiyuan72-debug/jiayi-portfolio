@@ -28,6 +28,7 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
   const isEditable = EDITABLE_TYPES.includes(node.type);
   const isImage = node.type === 'image' || node.type === 'gallery';
   const [showToolbar, setShowToolbar] = useState(false);
+  const [resizeTip, setResizeTip] = useState<{ w: number; h: number } | null>(null);
 
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -54,15 +55,19 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
     const startX = e.clientX, startY = e.clientY;
     const startW = parseFloat((p.width || '').replace('px', '')) || 200;
     const startH = parseFloat((p.height || '').replace('px', '')) || 80;
-    const maxW = parseFloat((p.width || '').replace('px', '')) || 0;
     const move = (ev: PointerEvent) => {
       const dx = ev.clientX - startX, dy = ev.clientY - startY;
       const newW = Math.max(60, startW + dx);
       const newH = Math.max(40, startH + dy);
       onResize(node.id, { width: `${newW}px`, height: `${newH}px` });
-      void dir; void maxW;
+      setResizeTip({ w: Math.round(newW), h: Math.round(newH) });
+      void dir;
     };
-    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    const up = () => {
+      setResizeTip(null);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
   };
@@ -199,7 +204,15 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
         (node.content as any)?.src
           ? <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={(node.content as any).src} alt={(node.content as any).alt || ''} className="w-full h-auto rounded" style={{ borderRadius: p.borderRadius ?? 0 }} />
+              <img src={(node.content as any).src} alt={(node.content as any).alt || ''}
+                className="rounded"
+                style={{
+                  width: (node.content as any).fitMode === 'original' ? undefined : '100%',
+                  maxWidth: (node.content as any).fitMode === 'original' ? '100%' : undefined,
+                  height: (node.content as any).fitMode === 'cover' ? '100%' : 'auto',
+                  objectFit: (node.content as any).fitMode === 'cover' ? 'cover' : undefined,
+                  aspectRatio: (node.content as any).fitMode === 'cover' ? undefined : 'auto',
+                }} />
               {(node.content as any).caption && <div className="text-xs text-[#b8b4ae] text-center mt-1">{(node.content as any).caption}</div>}
             </div>
           : <div className="text-xs text-[#b8b4ae] py-4 text-center">双击上传图片</div>
@@ -232,6 +245,13 @@ export default function CanvasNodeEditor({ node, selected, editing, depth, onSel
           <div onPointerDown={startResize('s')} title="调整高度"
             className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-6 h-2.5 rounded-full bg-blue-500 border border-white cursor-ns-resize" style={{ touchAction: 'none' }} />
         </>
+      )}
+
+      {/* 尺寸 tooltip */}
+      {resizeTip && (
+        <div className="absolute -bottom-7 right-0 z-30 bg-black/80 text-white text-[10px] rounded px-1.5 py-0.5 pointer-events-none">
+          {resizeTip.w} × {resizeTip.h} px
+        </div>
       )}
     </div>
   );
