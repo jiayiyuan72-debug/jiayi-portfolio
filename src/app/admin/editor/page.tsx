@@ -15,8 +15,6 @@ import DiarySectionEditor from './editors/DiarySectionEditor';
 import ArticleSectionEditor from './editors/ArticleSectionEditor';
 import CardSectionEditor from './editors/CardSectionEditor';
 import GallerySectionEditor from './editors/GallerySectionEditor';
-import CanvasEditor from './canvas/CanvasEditor';
-import PageBuilder from '@/components/admin/builder/PageBuilder';
 import BoardEditor from '@/components/admin/canvas-editor/CanvasEditor';
 import { GridLayout } from '@/types/content';
 
@@ -38,7 +36,7 @@ function EditorPageInner() {
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [editorMode, setEditorMode] = useState<'form' | 'canvas' | 'free' | 'board'>('form');
+  const [editorMode, setEditorMode] = useState<'form' | 'board'>('form');
 
   const selectedSection = sections.find(s => s.id === selectedSectionId) || null;
 
@@ -184,58 +182,6 @@ function EditorPageInner() {
     }).catch(() => loadData());
   };
 
-  // 画布模式：拖拽换位（更新 sort_order）
-  const handleCanvasReorder = (reordered: ContentItem[]) => {
-    setContentItems(prev => {
-      const map = new Map(reordered.map(i => [i.id, i]));
-      return prev.map(i => map.get(i.id) || i);
-    });
-    // 持久化每个块的 sort_order
-    reordered.forEach(item => {
-      if (item.sort_order !== undefined) {
-        fetch(`/api/content/${item.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sort_order: item.sort_order }),
-        });
-      }
-    });
-  };
-
-  // 画布模式：块的布局（col_span）变化 —— 防抖保存
-  const handleCanvasLayoutChange = (id: string, layout: GridLayout) => {
-    setContentItems(prev =>
-      prev.map(c => (c.id === id ? { ...c, fields: { ...c.fields, layout } } : c))
-    );
-    if (autoSaveTimer) clearTimeout(autoSaveTimer);
-    const timer = setTimeout(() => {
-      saveContentItem(id, { fields: { ...contentItems.find(c => c.id === id)?.fields, layout } })
-        .then(ok => { if (ok) toast.success('画布布局已保存'); });
-    }, 2000);
-    setAutoSaveTimer(timer);
-  };
-
-  const handleCanvasEdit = () => {
-    setEditorMode('form');
-  };
-
-  // 自由布局：从某内容项读取/写回 page_layout JSON
-  const getFreeLayout = (): any[] => {
-    const items = getSectionContent(selectedSectionId || '');
-    const holder = items.find(i => i.fields?.page_layout) || items[0];
-    return holder?.fields?.page_layout?.containers || [];
-  };
-
-  const saveFreeLayout = (containers: any[]) => {
-    if (!selectedSectionId) return;
-    const items = getSectionContent(selectedSectionId);
-    // 找一个持有 page_layout 的内容项；没有则用第一个（或新建）
-    const holder = items.find(i => i.fields?.page_layout) || items[0];
-    if (!holder) return;
-    saveContentItem(holder.id, { fields: { ...holder.fields, page_layout: { containers } } })
-      .then(ok => ok && toast.success('布局已保存'));
-  };
-
   // 画板模式：读/写 canvas_data（树形数组）
   const getCanvasData = (): any[] => {
     const items = getSectionContent(selectedSectionId || '');
@@ -262,21 +208,7 @@ function EditorPageInner() {
 
     const items = getSectionContent(selectedSection.id);
 
-    // 自由布局模式：容器化页面构建器
-    if (editorMode === 'free') {
-      return (
-        <div className="h-[calc(100vh-12rem)]">
-          <PageBuilder
-            key={selectedSection.id}
-            layout={getFreeLayout()}
-            onSave={saveFreeLayout}
-            onExit={() => setEditorMode('form')}
-          />
-        </div>
-      );
-    }
-
-    // 画板模式：canvas_data 树形容器编辑器
+    // 画板模式（可视化编辑）：canvas_data 树形容器编辑器
     if (editorMode === 'board') {
       return (
         <div className="h-[calc(100vh-12rem)]">
@@ -287,19 +219,6 @@ function EditorPageInner() {
             onExit={() => setEditorMode('form')}
           />
         </div>
-      );
-    }
-
-    // 画布模式：可视化排版（拖拽换位 + 宽度缩放 + 智能排列）
-    if (editorMode === 'canvas') {
-      return (
-        <CanvasEditor
-          section={{ id: selectedSection.id, layout_type: selectedSection.layout_type }}
-          contentItems={items}
-          onReorder={handleCanvasReorder}
-          onLayoutChange={handleCanvasLayoutChange}
-          onEdit={handleCanvasEdit}
-        />
       );
     }
 
@@ -435,7 +354,7 @@ function EditorPageInner() {
                 {selectedSection.name}
               </h1>
               <div className="flex items-center gap-3 text-xs text-[#8b8b8b]">
-                {/* 编辑模式切换 */}
+                {/* 编辑模式切换（2 种：内容管理 / 可视化编辑） */}
                 <div className="flex items-center gap-1 bg-[#f8f5f0] border border-[#e8e4de] rounded-lg p-0.5">
                   <button
                     onClick={() => setEditorMode('form')}
@@ -443,23 +362,7 @@ function EditorPageInner() {
                       editorMode === 'form' ? 'bg-[#2d2a24] text-white' : 'text-[#5a5349]'
                     }`}
                   >
-                    表单
-                  </button>
-                  <button
-                    onClick={() => setEditorMode('canvas')}
-                    className={`px-2.5 py-1 rounded-md transition-colors ${
-                      editorMode === 'canvas' ? 'bg-[#d4a574] text-white' : 'text-[#5a5349]'
-                    }`}
-                  >
-                    🖼️ 画布
-                  </button>
-                  <button
-                    onClick={() => setEditorMode('free')}
-                    className={`px-2.5 py-1 rounded-md transition-colors ${
-                      editorMode === 'free' ? 'bg-[#7c9a7f] text-white' : 'text-[#5a5349]'
-                    }`}
-                  >
-                    🧩 自由布局
+                    📋 内容管理
                   </button>
                   <button
                     onClick={() => setEditorMode('board')}
@@ -467,7 +370,7 @@ function EditorPageInner() {
                       editorMode === 'board' ? 'bg-[#4a90e2] text-white' : 'text-[#5a5349]'
                     }`}
                   >
-                    🎨 画板
+                    🎨 可视化编辑
                   </button>
                 </div>
                 {saving && <span>保存中...</span>}
@@ -479,11 +382,13 @@ function EditorPageInner() {
         </div>
       </div>
 
-      {/* 右侧：样式面板 */}
-      <StylePanel
-        section={selectedSection}
-        onChange={promptSaveSection}
-      />
+      {/* 右侧：样式面板（内容管理模式；可视化编辑模式在画板内自带属性面板） */}
+      {editorMode === 'form' && (
+        <StylePanel
+          section={selectedSection}
+          onChange={promptSaveSection}
+        />
+      )}
 
       {/* 新增板块弹窗 */}
       {showCreate && (
