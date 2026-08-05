@@ -81,7 +81,7 @@ export function defaultCanvasNode(type: CanvasType): CanvasNode {
     case 'row':
       return { id, type, props: { ...baseProps, gap: 16, responsiveStack: true, alignItems: 'stretch' }, content: { gap: 16 }, children: [defaultColumnNode('1'), defaultColumnNode('1')] };
     case 'column':
-      return { id, type, props: { width: '100%', height: 'auto', flexBasis: '1', marginBottom: 0 }, content: { valign: 'top' }, children: [] };
+      return { id, type, props: { width: 'auto', height: 'auto', flexBasis: '1', marginBottom: 0 }, content: { valign: 'top' }, children: [] };
     case 'card':
       return { id, type, props: { ...baseProps, paddingTop: 14, paddingRight: 14, paddingBottom: 14, paddingLeft: 14, bgColor: '#ffffff', borderRadius: 10, shadow: 'sm' }, content: { shadow: 'sm', borderColor: '#e8e6e0' }, children: [] };
     case 'text':
@@ -105,7 +105,7 @@ export function defaultColumnNode(flexBasis: string = '1'): CanvasNode {
   return {
     id,
     type: 'column',
-    props: { width: '100%', height: 'auto', flexBasis, marginBottom: 0 },
+    props: { width: 'auto', height: 'auto', flexBasis, marginBottom: 0 },
     content: { valign: 'top' },
     children: [],
   };

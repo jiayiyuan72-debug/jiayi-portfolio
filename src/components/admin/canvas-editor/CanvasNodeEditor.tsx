@@ -170,10 +170,11 @@ export default function CanvasNodeEditor(props: Props) {
   }
 
   if (node.type === 'column') {
+    const colWidth = p.width === '100%' ? 'auto' : (p.width || 'auto');
     return (
       <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
         className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-dashed border-[#d8d4cc] rounded`}
-        style={{ ...boxStyle, minHeight: 40, display: 'flex', flexDirection: 'column', justifyContent: p.valign || 'top', gap: 4 }}>
+        style={{ ...boxStyle, width: colWidth, minHeight: 40, display: 'flex', flexDirection: 'column', justifyContent: p.valign || 'top', gap: 4 }}>
         {selected && <SelectMenu />}
         {node.children.map(c => <CanvasNodeEditor {...childProps(c)} />)}
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-3">选中后添加内容</div>}

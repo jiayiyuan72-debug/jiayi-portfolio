@@ -63,8 +63,9 @@ function NodeRenderer({ node, isRoot = false }: { node: CanvasNode; isRoot?: boo
     );
   }
   if (node.type === 'column') {
+    const colWidth = (!isRoot && p.width === '100%') ? 'auto' : (style.width || 'auto');
     return (
-      <div style={{ ...style, display: 'flex', flexDirection: 'column', justifyContent: p.valign || 'top' }}>
+      <div style={{ ...style, width: colWidth, display: 'flex', flexDirection: 'column', justifyContent: p.valign || 'top' }}>
         {node.children.map(c => <NodeRenderer key={c.id} node={c} />)}
       </div>
     );
