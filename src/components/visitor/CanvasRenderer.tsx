@@ -4,11 +4,16 @@ interface Props {
   nodes: CanvasNode[];
 }
 
-/** 访客端：读 fields.canvas_data 递归渲染容器树（流式布局 + 自适应高度 + 响应式） */
+/** 
+ * 访客端：读 fields.canvas_data 递归渲染容器树
+ * - 根级节点强制 100% 宽度（忽略固定像素值）
+ * - 容器内节点尊重设定宽度，但小于 150px 的固定宽度会被提升为 100%
+ * - 流式布局 + 自适应高度 + 响应式
+ */
 export default function CanvasRenderer({ nodes }: Props) {
   if (!Array.isArray(nodes)) return null;
   return (
-    <div className="w-full">{nodes.map(n => <NodeRenderer key={n.id} node={n} />)}</div>
+    <div className="w-full">{nodes.map(n => <NodeRenderer key={n.id} node={n} isRoot />)}</div>
   );
 }
 
@@ -23,10 +28,20 @@ function colFlex(p: any) {
   return `${basis} 1 250px`;
 }
 
-function NodeRenderer({ node }: { node: CanvasNode }) {
+/** 清理宽度值：根级或过窄的固定像素宽度统一用 100% */
+function sanitizeWidth(rawWidth: string | undefined, isRoot: boolean): string {
+  if (!rawWidth || rawWidth === '100%' || rawWidth === 'auto') return '100%';
+  if (isRoot) return '100%';
+  // 解析像素值，小于 150px 的视为过窄
+  const pxMatch = rawWidth.match(/^(\d+(?:\.\d+)?)px$/);
+  if (pxMatch && parseFloat(pxMatch[1]) < 150) return '100%';
+  return rawWidth;
+}
+
+function NodeRenderer({ node, isRoot = false }: { node: CanvasNode; isRoot?: boolean }) {
   const p = node.props || {};
   const style: React.CSSProperties = {
-    width: p.width || '100%',
+    width: sanitizeWidth(p.width, isRoot),
     height: p.height === 'auto' ? undefined : p.height,
     marginTop: p.marginTop ?? 0,
     marginRight: p.marginRight ?? 0,

@@ -40,8 +40,15 @@ export default function CanvasNodeEditor(props: Props) {
   const [resizeTip, setResizeTip] = useState<{ w: number; h: number } | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
+  // 根级节点（depth=0）或过窄的固定像素宽度统一用 100%
+  const rawW = p.width || '100%';
+  const isRootNode = depth === 0;
+  const pxMatch = rawW.match(/^(\d+(?:\.\d+)?)px$/);
+  const tooNarrow = pxMatch && parseFloat(pxMatch[1]) < 150;
+  const effectiveWidth = (isRootNode || tooNarrow) ? '100%' : rawW;
+
   const boxStyle: React.CSSProperties = {
-    width: p.width || '100%',
+    width: effectiveWidth,
     height: p.height === 'auto' ? undefined : p.height,
     marginTop: p.marginTop ?? 0, marginRight: p.marginRight ?? 0, marginBottom: p.marginBottom ?? 12, marginLeft: p.marginLeft ?? 0,
     padding: p.paddingTop != null ? `${p.paddingTop}px ${p.paddingRight ?? 0}px ${p.paddingBottom ?? 0}px ${p.paddingLeft ?? 0}px` : undefined,
@@ -65,7 +72,7 @@ export default function CanvasNodeEditor(props: Props) {
     const startH = parseFloat((p.height || '').replace('px', '')) || 80;
     const move = (ev: PointerEvent) => {
       const dx = ev.clientX - startX, dy = ev.clientY - startY;
-      const newW = Math.max(60, startW + dx);
+      const newW = Math.max(200, startW + dx);
       const newH = Math.max(40, startH + dy);
       onResize(node.id, { width: `${newW}px`, height: `${newH}px` });
       setResizeTip({ w: Math.round(newW), h: Math.round(newH) });
