@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { CanvasNode, CanvasType, CANVAS_TYPE_LABELS, LAYOUT_TYPES, canNest, CAN_NEST_IN } from '@/types/canvas';
+import { CanvasNode, CanvasType, CANVAS_TYPE_LABELS, LAYOUT_TYPES, canNest, CAN_NEST_IN, TemplateId } from '@/types/canvas';
 
 interface NodeCallbacks {
   onSelectId: (id: string) => void;
@@ -13,8 +13,9 @@ interface NodeCallbacks {
   onMoveOrder: (id: string, dir: -1 | 1) => void;
   onPickImage: (id: string) => void;
   onPickGallery: (id: string) => void;
-  onResize: (id: string, patch: { width?: string; height?: string }) => void;
+  onResize: (id: string, patch: { width?: string; height?: string; flexBasis?: string }) => void;
   onAddChild: (parentId: string, type: CanvasType) => void;
+  onDropOnNode: (nodeId: string, position: 'before' | 'after' | 'inside', type: CanvasType | TemplateId, isTemplate?: boolean) => void;
 }
 
 interface Props extends NodeCallbacks {
@@ -23,13 +24,15 @@ interface Props extends NodeCallbacks {
   editingId: string | null;
   depth: number;
   preview: boolean;
+  flexParentId?: string;
+  flexParentBasis?: string;
 }
 
 const EDITABLE_TYPES = ['text', 'quote'];
 
 /** Single canvas node: recursive render with proper child selection */
 export default function CanvasNodeEditor(props: Props) {
-  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild } = props;
+  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild, onDropOnNode, flexParentId, flexParentBasis } = props;
 
   const p = node.props || {};
   const isEditable = EDITABLE_TYPES.includes(node.type);
@@ -38,6 +41,7 @@ export default function CanvasNodeEditor(props: Props) {
   const editing = !preview && node.id === editingId;
   const [showToolbar, setShowToolbar] = useState(false);
   const [resizeTip, setResizeTip] = useState<{ w: number; h: number } | null>(null);
+  const [dropZone, setDropZone] = useState<'before' | 'after' | 'inside' | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
   const boxStyle: React.CSSProperties = {
@@ -58,9 +62,80 @@ export default function CanvasNodeEditor(props: Props) {
     else if (node.type === 'gallery') onPickGallery(node.id);
   };
 
+  // ---- Drop zone handlers ----
+  const handleDragOver = (e: React.DragEvent) => {
+    if (preview) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const h = rect.height;
+    let pos: 'before' | 'after' | 'inside';
+    if (LAYOUT_TYPES.includes(node.type)) {
+      if (y < h * 0.3) pos = 'before';
+      else if (y > h * 0.7) pos = 'after';
+      else pos = 'inside';
+    } else {
+      pos = y < h * 0.5 ? 'before' : 'after';
+    }
+    setDropZone(pos);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.stopPropagation();
+    setDropZone(null);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (preview) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const type = e.dataTransfer.getData('application/x-canvas-type') as CanvasType;
+    const templateId = e.dataTransfer.getData('application/x-canvas-template') as TemplateId;
+    if (!type && !templateId) { setDropZone(null); return; }
+
+    const pos = dropZone || 'after';
+    if (templateId) {
+      onDropOnNode(node.id, pos, templateId, true);
+    } else {
+      onDropOnNode(node.id, pos, type, false);
+    }
+    setDropZone(null);
+  };
+
+  // ---- Smart resize: flexBasis for nodes inside a row's column ----
   const startResize = (dir: 'se' | 's') => (e: React.PointerEvent) => {
     e.preventDefault(); e.stopPropagation();
     const startX = e.clientX, startY = e.clientY;
+
+    // If this node is inside a flex column, adjust the column's flexBasis proportionally
+    if (flexParentId) {
+      const currentBasis = parseFloat(flexParentBasis || '1') || 1;
+      const containerEl = boxRef.current?.closest('.flex-row-container') as HTMLElement | null;
+      const containerW = containerEl?.offsetWidth || 800;
+      const move = (ev: PointerEvent) => {
+        const dx = ev.clientX - startX;
+        const deltaRatio = dx / containerW;
+        const newBasis = Math.max(0.1, currentBasis + deltaRatio * 2);
+        const newBasisStr = newBasis.toFixed(2);
+        onResize(flexParentId, { flexBasis: newBasisStr });
+        setResizeTip({ w: Math.round(newBasis * 100), h: 0 });
+        void dir;
+      };
+      const up = () => {
+        setResizeTip(null);
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      return;
+    }
+
+    // Normal resize (absolute pixels)
     const startW = parseFloat((p.width || '').replace('px', '')) || 300;
     const startH = parseFloat((p.height || '').replace('px', '')) || 120;
     const move = (ev: PointerEvent) => {
@@ -105,6 +180,15 @@ export default function CanvasNodeEditor(props: Props) {
     </div>
   );
 
+  // Drop zone visual indicators
+  const DropZoneIndicators = () => (
+    <>
+      {dropZone === 'before' && <div className="absolute -top-0.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-40 pointer-events-none" />}
+      {dropZone === 'after' && <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-40 pointer-events-none" />}
+      {dropZone === 'inside' && <div className="absolute inset-0 border-2 border-blue-500 rounded z-40 pointer-events-none bg-blue-50/20" />}
+    </>
+  );
+
   // Add-content bar for containers
   const AddContentBar = () => {
     if (preview || !selected || !LAYOUT_TYPES.includes(node.type)) return null;
@@ -121,14 +205,18 @@ export default function CanvasNodeEditor(props: Props) {
     );
   };
 
-  // Shared child props - key change: pass selectedId/editingId down so children can be selected
-  const childProps = (c: CanvasNode) => ({
+  // Shared child props - pass all callbacks down so children can be selected/dropped on
+  // Also propagate flexParentId to children of containers inside flex columns
+  const childProps = (c: CanvasNode, extra?: Record<string, any>) => ({
     key: c.id,
     node: c,
     selectedId,
     editingId,
     depth: depth + 1,
     preview,
+    // Propagate flex info to children (so nodes inside cards inside columns also get smart resize)
+    ...(flexParentId ? { flexParentId, flexParentBasis } : {}),
+    ...extra,
     onSelectId,
     onEditId,
     onStopEdit,
@@ -140,6 +228,7 @@ export default function CanvasNodeEditor(props: Props) {
     onPickGallery,
     onResize,
     onAddChild,
+    onDropOnNode,
   });
 
   // ---- PREVIEW MODE: render real content without editing UI ----
@@ -151,16 +240,18 @@ export default function CanvasNodeEditor(props: Props) {
   if (node.type === 'row') {
     return (
       <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }} onDoubleClick={handleDoubleClick}
-        className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} rounded bg-white/50`}
+        onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+        className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} rounded bg-white/50 flex-row-container`}
         style={{ ...boxStyle, display: 'flex', flexWrap: 'nowrap', gap: p.gap ?? 16, alignItems: p.alignItems || 'stretch', marginBottom: p.marginBottom ?? 12 }}>
         {selected && <SelectMenu />}
+        <DropZoneIndicators />
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-4 flex-1">选中后从下方添加「列」</div>}
         {node.children.map(c => {
           const basis = c.props?.flexBasis || '1';
           const flexVal = basis === 'auto' ? '0 0 auto' : `${basis} 1 0`;
           return (
             <div key={c.id} style={{ flex: flexVal, minWidth: 0 }} className="relative">
-              <CanvasNodeEditor {...childProps(c)} />
+              <CanvasNodeEditor {...childProps(c, { flexParentId: c.id, flexParentBasis: basis })} />
             </div>
           );
         })}
@@ -173,9 +264,11 @@ export default function CanvasNodeEditor(props: Props) {
     const colWidth = p.width === '100%' ? 'auto' : (p.width || 'auto');
     return (
       <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
+        onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
         className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-dashed border-[#d8d4cc] rounded`}
         style={{ ...boxStyle, width: colWidth, minHeight: 40, display: 'flex', flexDirection: 'column', justifyContent: p.valign || 'top', gap: 4 }}>
         {selected && <SelectMenu />}
+        <DropZoneIndicators />
         {node.children.map(c => <CanvasNodeEditor {...childProps(c)} />)}
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-3">选中后添加内容</div>}
         <AddContentBar />
@@ -186,9 +279,11 @@ export default function CanvasNodeEditor(props: Props) {
   if (node.type === 'card') {
     return (
       <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
+        onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
         className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-[#e8e6e0] rounded bg-white`}
         style={{ ...boxStyle, boxShadow: { none: 'none', sm: '0 1px 2px rgba(0,0,0,.05)', md: '0 2px 8px rgba(0,0,0,.08)', lg: '0 4px 16px rgba(0,0,0,.1)' }[p.shadow || 'sm'] }}>
         {selected && <SelectMenu />}
+        <DropZoneIndicators />
         {node.children.map(c => <CanvasNodeEditor {...childProps(c)} />)}
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-3 py-4">卡片内容（选中后添加）</div>}
         <AddContentBar />
@@ -199,9 +294,11 @@ export default function CanvasNodeEditor(props: Props) {
   if (node.type === 'section') {
     return (
       <section ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
+        onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
         className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-[#e8e4de] rounded`}
         style={boxStyle}>
         {selected && <SelectMenu />}
+        <DropZoneIndicators />
         <div className="flex items-center justify-between mb-2">
           {(node.content as any)?.showTitle !== false && (
             <span className="text-sm font-semibold text-[#2d2a24]">{((node.content as any)?.title) || '区块'}</span>
@@ -225,10 +322,13 @@ export default function CanvasNodeEditor(props: Props) {
 
   return (
     <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }} onDoubleClick={handleDoubleClick}
+      onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
       className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'border border-transparent hover:border-[#4a90e2]/40 hover:ring-1 hover:ring-[#4a90e2]/30'} rounded`}
       style={leafStyle}
       onMouseEnter={() => setShowToolbar(true)} onMouseLeave={() => setShowToolbar(false)}
     >
+      <DropZoneIndicators />
+
       {/* Content rendering */}
       {node.type === 'text' ? (
         <div className={`text-sm ${editing ? 'outline-none ring-1 ring-green-400' : ''}`} style={{ lineHeight: 1.7 }}
@@ -282,7 +382,7 @@ export default function CanvasNodeEditor(props: Props) {
       {/* Size tooltip */}
       {resizeTip && (
         <div className="absolute -bottom-7 right-0 z-30 bg-black/80 text-white text-[10px] rounded px-1.5 py-0.5 pointer-events-none">
-          {resizeTip.w} × {resizeTip.h} px
+          {flexParentId ? `flex: ${resizeTip.w}%` : `${resizeTip.w} × ${resizeTip.h} px`}
         </div>
       )}
     </div>

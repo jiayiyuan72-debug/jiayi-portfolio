@@ -7,7 +7,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CanvasNode, CanvasType, defaultCanvasNode, LAYOUT_TYPES, canNest, TemplateId, createTemplate } from '@/types/canvas';
+import { CanvasNode, CanvasType, defaultCanvasNode, defaultColumnNode, LAYOUT_TYPES, canNest, TemplateId, createTemplate } from '@/types/canvas';
 import { Section } from '@/types/section';
 import ComponentPalette from './ComponentPalette';
 import CanvasNodeEditor from './CanvasNodeEditor';
@@ -55,6 +55,45 @@ function addChild(list: CanvasNode[], parentId: string | null, child: CanvasNode
   });
 }
 
+/** Insert a node before or after a target node in its parent's children list */
+function addSibling(list: CanvasNode[], targetId: string, node: CanvasNode, position: 'before' | 'after'): CanvasNode[] {
+  const idx = list.findIndex(n => n.id === targetId);
+  if (idx >= 0) {
+    const insertAt = position === 'before' ? idx : idx + 1;
+    return [...list.slice(0, insertAt), node, ...list.slice(insertAt)];
+  }
+  return list.map(n => ({ ...n, children: addSibling(n.children, targetId, node, position) }));
+}
+
+/** Wrap two sibling nodes into a row with 2 columns. The row replaces the first node, the second node is removed. */
+function wrapInRow(list: CanvasNode[], node1Id: string, node2Id: string): CanvasNode[] {
+  const replaceInList = (l: CanvasNode[]): CanvasNode[] => {
+    const idx1 = l.findIndex(n => n.id === node1Id);
+    const idx2 = l.findIndex(n => n.id === node2Id);
+    if (idx1 >= 0 && idx2 >= 0) {
+      const node1 = l[idx1];
+      const node2 = l[idx2];
+      const col1 = { ...defaultColumnNode('1'), children: [JSON.parse(JSON.stringify(node1))] };
+      const col2 = { ...defaultColumnNode('1'), children: [JSON.parse(JSON.stringify(node2))] };
+      const row: CanvasNode = {
+        id: 'ctr_' + crypto.randomUUID().slice(0, 10),
+        type: 'row',
+        props: { width: '100%', height: 'auto', gap: 16, marginBottom: 12, responsiveStack: true, alignItems: 'stretch' },
+        content: { gap: 16 },
+        children: [col1, col2],
+      };
+      const minIdx = Math.min(idx1, idx2);
+      const maxIdx = Math.max(idx1, idx2);
+      const next = [...l];
+      next[minIdx] = row;
+      next.splice(maxIdx, 1);
+      return next;
+    }
+    return l.map(n => ({ ...n, children: replaceInList(n.children) }));
+  };
+  return replaceInList(list);
+}
+
 export default function CanvasEditor({ trees: initialTrees, onSave, sectionName, section, onSectionUpdate, onSectionSave, saving }: Props) {
   const [trees, setTrees] = useState<CanvasNode[]>(() => JSON.parse(JSON.stringify(initialTrees || [])));
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -88,33 +127,40 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     setSelectedId(null); setEditingId(null);
   };
 
-  // ---- Add component: to selected container or root ----
+  // ---- Add component: smart placement with auto-row for adjacent images ----
   const addComponent = (type: CanvasType) => {
     const node = defaultCanvasNode(type);
+    const sel = selectedId ? findNode(trees, selectedId) : null;
 
     // If a layout container is selected, add as its child
-    const sel = selectedId ? findNode(trees, selectedId) : null;
     if (sel && LAYOUT_TYPES.includes(sel.type) && canNest(sel, type)) {
       setTree(addChild(trees, selectedId!, node));
-    } else if (sel) {
-      // If a leaf is selected, add as sibling in its parent
-      const parent = findParent(trees, selectedId!);
-      if (parent) {
-        const parentId = findParentId(trees, selectedId!);
-        setTree(addChild(trees, parentId, node));
-      } else {
-        setTree([...trees, node]);
-      }
-    } else {
-      // No selection: add to root
-      setTree([...trees, node]);
+      setSelectedId(node.id);
+      if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
+      return;
     }
 
+    // Smart: if adding an image and the selected node is also an image, auto-wrap both in a row
+    if (type === 'image' && sel && sel.type === 'image') {
+      setTree(wrapInRow(trees, selectedId!, node.id));
+      setSelectedId(node.id);
+      return;
+    }
+
+    // If a leaf is selected, add as sibling after it
+    if (sel) {
+      setTree(addSibling(trees, selectedId!, node, 'after'));
+      setSelectedId(node.id);
+      if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
+      return;
+    }
+
+    // No selection: add to root
+    setTree([...trees, node]);
     setSelectedId(node.id);
     if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
   };
 
-  // HTML5 drag
   // ---- Add preset template ----
   const addTemplate = (templateId: TemplateId) => {
     const node = createTemplate(templateId);
@@ -127,17 +173,59 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     setSelectedId(null);
   };
 
-  // HTML5 drag-and-drop on canvas (for future use)
+  // HTML5 drag-and-drop on canvas (fallback for drops on empty canvas space)
   const onDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const type = e.dataTransfer.getData('application/x-canvas-type') as CanvasType;
+    const templateId = e.dataTransfer.getData('application/x-canvas-template') as TemplateId;
+    if (templateId) { addTemplate(templateId); return; }
     if (!type) return;
     addComponent(type);
   };
 
-  // Resize node
-  const onResizeNode = (id: string, patch: { width?: string; height?: string }) => {
+  // ---- Per-node drop: insert before/after a node or inside a container ----
+  const onDropOnNode = (nodeId: string, position: 'before' | 'after' | 'inside', type: CanvasType | TemplateId, isTemplate?: boolean) => {
+    if (isTemplate) {
+      const node = createTemplate(type as TemplateId);
+      if (position === 'inside') {
+        const target = findNode(trees, nodeId);
+        if (target && LAYOUT_TYPES.includes(target.type)) {
+          setTree(addChild(trees, nodeId, node));
+        }
+      } else {
+        setTree(addSibling(trees, nodeId, node, position));
+      }
+      setSelectedId(null);
+      return;
+    }
+
+    const canvasType = type as CanvasType;
+    const node = defaultCanvasNode(canvasType);
+
+    if (position === 'inside') {
+      const target = findNode(trees, nodeId);
+      if (target && LAYOUT_TYPES.includes(target.type) && canNest(target, canvasType)) {
+        setTree(addChild(trees, nodeId, node));
+        setSelectedId(node.id);
+        if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
+      }
+    } else {
+      // Smart: if adding an image next to another image, auto-wrap both in a row
+      const target = findNode(trees, nodeId);
+      if (canvasType === 'image' && target && target.type === 'image') {
+        setTree(wrapInRow(trees, nodeId, node.id));
+        setSelectedId(node.id);
+        return;
+      }
+      setTree(addSibling(trees, nodeId, node, position));
+      setSelectedId(node.id);
+      if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
+    }
+  };
+
+  // Resize node (supports flexBasis for smart flex resize)
+  const onResizeNode = (id: string, patch: { width?: string; height?: string; flexBasis?: string }) => {
     setTree(mapTree(trees, n => n.id === id ? { ...n, props: { ...n.props, ...patch } } : n));
   };
 
@@ -265,6 +353,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     onPickImage: pickImage,
     onPickGallery: pickImage,
     onResize: onResizeNode,
+    onDropOnNode: onDropOnNode,
     onAddChild: (parentId: string, type: CanvasType) => {
       const node = defaultCanvasNode(type);
       setTree(addChild(trees, parentId, node));
@@ -308,7 +397,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
             {trees.length === 0 && !preview && (
               <div className="text-center text-sm text-[#b8b4ae] py-20">
                 从左侧拖入或点击组件开始编辑
-                <div className="mt-2 text-xs">选中容器后添加的内容会放入该容器内</div>
+                <div className="mt-2 text-xs">拖拽图片到已有图片旁可自动并排显示</div>
               </div>
             )}
             <DndContext sensors={rootDragSensors} collisionDetection={closestCenter} onDragEnd={handleRootDragEnd}>

@@ -11,15 +11,17 @@ const LAYOUT: CanvasType[] = ['section', 'row', 'column', 'card'];
 const CONTENT: CanvasType[] = ['text', 'image', 'quote', 'divider', 'spacer', 'gallery'];
 const TEMPLATES: TemplateId[] = ['image-text', 'text-image', 'two-cards', 'three-cards', 'hero-banner', 'gallery-grid', 'feature-list', 'quote-section'];
 
-/** 左侧组件库：点击即添加到画板 */
+/** 左侧组件库：点击或拖拽添加到画板 */
 export default function ComponentPalette({ onAddClick, onAddTemplate }: Props) {
   const render = (t: CanvasType) => (
     <button
       key={t}
       type="button"
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData('application/x-canvas-type', t); e.dataTransfer.effectAllowed = 'copy'; }}
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddClick(t); }}
       className="flex flex-col items-center gap-1 px-1 py-2 rounded-lg border border-[#e8e4de] bg-[#f8f5f0] hover:border-[#d4a574] hover:bg-white transition-colors cursor-pointer select-none active:scale-95"
-      title={`点击添加${CANVAS_TYPE_LABELS[t].label}`}
+      title={`点击或拖拽添加${CANVAS_TYPE_LABELS[t].label}`}
     >
       <span className="text-base pointer-events-none">{CANVAS_TYPE_LABELS[t].icon}</span>
       <span className="text-[10px] text-[#2d2a24] pointer-events-none">{CANVAS_TYPE_LABELS[t].label}</span>
@@ -30,9 +32,11 @@ export default function ComponentPalette({ onAddClick, onAddTemplate }: Props) {
     <button
       key={t}
       type="button"
+      draggable
+      onDragStart={(e) => { e.dataTransfer.setData('application/x-canvas-template', t); e.dataTransfer.effectAllowed = 'copy'; }}
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddTemplate?.(t); }}
       className="flex items-center gap-2 w-full px-2 py-2 rounded-lg border border-[#e8e4de] bg-[#f8f5f0] hover:border-[#d4a574] hover:bg-white transition-colors cursor-pointer select-none active:scale-95 text-left"
-      title={`点击添加${TEMPLATE_LABELS[t].label}`}
+      title={`点击或拖拽添加${TEMPLATE_LABELS[t].label}`}
     >
       <span className="text-base pointer-events-none flex-shrink-0">{TEMPLATE_LABELS[t].icon}</span>
       <div className="flex flex-col pointer-events-none min-w-0">
@@ -46,7 +50,7 @@ export default function ComponentPalette({ onAddClick, onAddTemplate }: Props) {
     <div className="w-40 bg-white border-r border-[#e8e4de] p-3 overflow-y-auto flex-shrink-0">
       {/* 布局模板 */}
       <p className="text-xs font-medium text-[#2d2a24] mb-2">布局模板</p>
-      <p className="text-[10px] text-[#b8b4ae] mb-1.5">一键插入常用布局</p>
+      <p className="text-[10px] text-[#b8b4ae] mb-1.5">拖拽或点击插入</p>
       <div className="flex flex-col gap-1.5 mb-4">
         {TEMPLATES.map(renderTemplate)}
       </div>
