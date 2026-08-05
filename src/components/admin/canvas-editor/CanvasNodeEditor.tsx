@@ -3,6 +3,9 @@
 import { useRef, useState } from 'react';
 import { CanvasNode, CanvasType, CANVAS_TYPE_LABELS, LAYOUT_TYPES, canNest, CAN_NEST_IN, TemplateId } from '@/types/canvas';
 
+/** 5-way drop position: before / after / inside / left / right */
+type DropPosition = 'before' | 'after' | 'inside' | 'left' | 'right';
+
 interface NodeCallbacks {
   onSelectId: (id: string) => void;
   onEditId: (id: string) => void;
@@ -15,7 +18,8 @@ interface NodeCallbacks {
   onPickGallery: (id: string) => void;
   onResize: (id: string, patch: { width?: string; height?: string; flexBasis?: string }) => void;
   onAddChild: (parentId: string, type: CanvasType) => void;
-  onDropOnNode: (nodeId: string, position: 'before' | 'after' | 'inside', type: CanvasType | TemplateId, isTemplate?: boolean) => void;
+  onDropOnNode: (nodeId: string, position: DropPosition, type: CanvasType | TemplateId, isTemplate?: boolean) => void;
+  onMoveNode: (sourceId: string, targetId: string, position: DropPosition) => void;
 }
 
 interface Props extends NodeCallbacks {
@@ -32,7 +36,7 @@ const EDITABLE_TYPES = ['text', 'quote'];
 
 /** Single canvas node: recursive render with proper child selection */
 export default function CanvasNodeEditor(props: Props) {
-  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild, onDropOnNode, flexParentId, flexParentBasis } = props;
+  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild, onDropOnNode, onMoveNode, flexParentId, flexParentBasis } = props;
 
   const p = node.props || {};
   const isEditable = EDITABLE_TYPES.includes(node.type);
@@ -40,8 +44,9 @@ export default function CanvasNodeEditor(props: Props) {
   const selected = !preview && node.id === selectedId;
   const editing = !preview && node.id === editingId;
   const [showToolbar, setShowToolbar] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const [resizeTip, setResizeTip] = useState<{ w: number; h: number } | null>(null);
-  const [dropZone, setDropZone] = useState<'before' | 'after' | 'inside' | null>(null);
+  const [dropZone, setDropZone] = useState<DropPosition | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
   const boxStyle: React.CSSProperties = {
@@ -62,29 +67,51 @@ export default function CanvasNodeEditor(props: Props) {
     else if (node.type === 'gallery') onPickGallery(node.id);
   };
 
-  // ---- Drop zone handlers ----
+  // ---- 5-way drop zone handlers ----
   const handleDragOver = (e: React.DragEvent) => {
     if (preview) return;
+
+    // Only proceed if this is a recognized drag type
+    const types = e.dataTransfer.types;
+    const isNodeDrag = types.includes('application/x-canvas-node-id');
+    const isLibraryDrag = types.includes('application/x-canvas-type') || types.includes('application/x-canvas-template');
+    if (!isNodeDrag && !isLibraryDrag) return;
+
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'copy';
+    e.dataTransfer.dropEffect = isNodeDrag ? 'move' : 'copy';
 
     const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    const w = rect.width;
     const h = rect.height;
-    let pos: 'before' | 'after' | 'inside';
+
+    let pos: DropPosition;
     if (LAYOUT_TYPES.includes(node.type)) {
-      if (y < h * 0.3) pos = 'before';
-      else if (y > h * 0.7) pos = 'after';
+      // For layout containers: 5-way detection
+      const xRatio = x / w;
+      const yRatio = y / h;
+      if (xRatio < 0.15) pos = 'left';
+      else if (xRatio > 0.85) pos = 'right';
+      else if (yRatio < 0.2) pos = 'before';
+      else if (yRatio > 0.8) pos = 'after';
       else pos = 'inside';
     } else {
-      pos = y < h * 0.5 ? 'before' : 'after';
+      // For leaf nodes: left/right + before/after
+      const xRatio = x / w;
+      if (xRatio < 0.3) pos = 'left';
+      else if (xRatio > 0.7) pos = 'right';
+      else pos = y < h * 0.5 ? 'before' : 'after';
     }
     setDropZone(pos);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.stopPropagation();
+    // Only clear dropZone when truly leaving this element
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
     setDropZone(null);
   };
 
@@ -93,11 +120,23 @@ export default function CanvasNodeEditor(props: Props) {
     e.preventDefault();
     e.stopPropagation();
 
+    const pos = dropZone || 'after';
+
+    // Check for existing node drag (move)
+    const nodeId = e.dataTransfer.getData('application/x-canvas-node-id');
+    if (nodeId) {
+      if (nodeId !== node.id) {
+        onMoveNode(nodeId, node.id, pos);
+      }
+      setDropZone(null);
+      return;
+    }
+
+    // Otherwise, component library drag (add new)
     const type = e.dataTransfer.getData('application/x-canvas-type') as CanvasType;
     const templateId = e.dataTransfer.getData('application/x-canvas-template') as TemplateId;
     if (!type && !templateId) { setDropZone(null); return; }
 
-    const pos = dropZone || 'after';
     if (templateId) {
       onDropOnNode(node.id, pos, templateId, true);
     } else {
@@ -180,12 +219,32 @@ export default function CanvasNodeEditor(props: Props) {
     </div>
   );
 
-  // Drop zone visual indicators
+  // Drag handle: shown when selected or hovered (not in preview/editing mode)
+  const showHandle = !preview && (selected || hovered) && !editing;
+  const DragHandle = showHandle ? (
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.stopPropagation();
+        e.dataTransfer.setData('application/x-canvas-node-id', node.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onClick={(e) => e.stopPropagation()}
+      className="absolute -top-2 left-1 z-40 w-5 h-5 rounded bg-[#4a90e2] text-white flex items-center justify-center cursor-grab hover:scale-110 text-xs select-none shadow"
+      title="拖动移动此元素"
+    >
+      ⠿
+    </div>
+  ) : null;
+
+  // Drop zone visual indicators (5-way)
   const DropZoneIndicators = () => (
     <>
       {dropZone === 'before' && <div className="absolute -top-0.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-40 pointer-events-none" />}
       {dropZone === 'after' && <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-40 pointer-events-none" />}
       {dropZone === 'inside' && <div className="absolute inset-0 border-2 border-blue-500 rounded z-40 pointer-events-none bg-blue-50/20" />}
+      {dropZone === 'left' && <div className="absolute top-0 bottom-0 -left-1 w-1.5 bg-blue-500 rounded-full z-40 pointer-events-none" />}
+      {dropZone === 'right' && <div className="absolute top-0 bottom-0 -right-1 w-1.5 bg-blue-500 rounded-full z-40 pointer-events-none" />}
     </>
   );
 
@@ -229,6 +288,7 @@ export default function CanvasNodeEditor(props: Props) {
     onResize,
     onAddChild,
     onDropOnNode,
+    onMoveNode,
   });
 
   // ---- PREVIEW MODE: render real content without editing UI ----
@@ -241,8 +301,10 @@ export default function CanvasNodeEditor(props: Props) {
     return (
       <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }} onDoubleClick={handleDoubleClick}
         onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+        onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} rounded bg-white/50 flex-row-container`}
         style={{ ...boxStyle, display: 'flex', flexWrap: 'nowrap', gap: p.gap ?? 16, alignItems: p.alignItems || 'stretch', marginBottom: p.marginBottom ?? 12 }}>
+        {DragHandle}
         {selected && <SelectMenu />}
         <DropZoneIndicators />
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-4 flex-1">选中后从下方添加「列」</div>}
@@ -265,8 +327,10 @@ export default function CanvasNodeEditor(props: Props) {
     return (
       <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
         onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+        onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-dashed border-[#d8d4cc] rounded`}
         style={{ ...boxStyle, width: colWidth, minHeight: 40, display: 'flex', flexDirection: 'column', justifyContent: p.valign || 'top', gap: 4 }}>
+        {DragHandle}
         {selected && <SelectMenu />}
         <DropZoneIndicators />
         {node.children.map(c => <CanvasNodeEditor {...childProps(c)} />)}
@@ -280,8 +344,10 @@ export default function CanvasNodeEditor(props: Props) {
     return (
       <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
         onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+        onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-[#e8e6e0] rounded bg-white`}
         style={{ ...boxStyle, boxShadow: { none: 'none', sm: '0 1px 2px rgba(0,0,0,.05)', md: '0 2px 8px rgba(0,0,0,.08)', lg: '0 4px 16px rgba(0,0,0,.1)' }[p.shadow || 'sm'] }}>
+        {DragHandle}
         {selected && <SelectMenu />}
         <DropZoneIndicators />
         {node.children.map(c => <CanvasNodeEditor {...childProps(c)} />)}
@@ -295,8 +361,10 @@ export default function CanvasNodeEditor(props: Props) {
     return (
       <section ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }}
         onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+        onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'hover:ring-1 hover:ring-[#4a90e2]/40'} border border-[#e8e4de] rounded`}
         style={boxStyle}>
+        {DragHandle}
         {selected && <SelectMenu />}
         <DropZoneIndicators />
         <div className="flex items-center justify-between mb-2">
@@ -325,8 +393,9 @@ export default function CanvasNodeEditor(props: Props) {
       onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
       className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'border border-transparent hover:border-[#4a90e2]/40 hover:ring-1 hover:ring-[#4a90e2]/30'} rounded`}
       style={leafStyle}
-      onMouseEnter={() => setShowToolbar(true)} onMouseLeave={() => setShowToolbar(false)}
+      onMouseEnter={() => { setShowToolbar(true); setHovered(true); }} onMouseLeave={() => { setShowToolbar(false); setHovered(false); }}
     >
+      {DragHandle}
       <DropZoneIndicators />
 
       {/* Content rendering */}
