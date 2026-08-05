@@ -18,6 +18,7 @@ interface NodeCallbacks {
   onPickGallery: (id: string) => void;
   onResize: (id: string, patch: { width?: string; height?: string; flexBasis?: string }) => void;
   onAddChild: (parentId: string, type: CanvasType) => void;
+  onQuickAddImage: (parentId: string) => void;
   onDropOnNode: (nodeId: string, position: DropPosition, type: CanvasType | TemplateId, isTemplate?: boolean) => void;
   onMoveNode: (sourceId: string, targetId: string, position: DropPosition) => void;
 }
@@ -36,7 +37,7 @@ const EDITABLE_TYPES = ['text', 'quote'];
 
 /** Single canvas node: recursive render with proper child selection */
 export default function CanvasNodeEditor(props: Props) {
-  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild, onDropOnNode, onMoveNode, flexParentId, flexParentBasis } = props;
+  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild, onQuickAddImage, onDropOnNode, onMoveNode, flexParentId, flexParentBasis } = props;
 
   const p = node.props || {};
   const isEditable = EDITABLE_TYPES.includes(node.type);
@@ -219,8 +220,8 @@ export default function CanvasNodeEditor(props: Props) {
     </div>
   );
 
-  // Drag handle: shown when selected or hovered (not in preview/editing mode)
-  const showHandle = !preview && (selected || hovered) && !editing;
+  // Drag handle: always visible (not in preview/editing mode)
+  const showHandle = !preview && !editing;
   const DragHandle = showHandle ? (
     <div
       draggable
@@ -230,21 +231,46 @@ export default function CanvasNodeEditor(props: Props) {
         e.dataTransfer.effectAllowed = 'move';
       }}
       onClick={(e) => e.stopPropagation()}
-      className="absolute -top-2 left-1 z-40 w-5 h-5 rounded bg-[#4a90e2] text-white flex items-center justify-center cursor-grab hover:scale-110 text-xs select-none shadow"
+      className="absolute -top-2.5 left-0 z-40 w-6 h-6 rounded bg-[#4a90e2] text-white flex items-center justify-center cursor-grab hover:scale-110 text-xs select-none shadow opacity-50 hover:opacity-100 transition-opacity"
       title="拖动移动此元素"
     >
       ⠿
     </div>
   ) : null;
 
-  // Drop zone visual indicators (5-way)
+  // Drop zone visual indicators (5-way) with text labels
   const DropZoneIndicators = () => (
     <>
-      {dropZone === 'before' && <div className="absolute -top-0.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-40 pointer-events-none" />}
-      {dropZone === 'after' && <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-40 pointer-events-none" />}
-      {dropZone === 'inside' && <div className="absolute inset-0 border-2 border-blue-500 rounded z-40 pointer-events-none bg-blue-50/20" />}
-      {dropZone === 'left' && <div className="absolute top-0 bottom-0 -left-1 w-1.5 bg-blue-500 rounded-full z-40 pointer-events-none" />}
-      {dropZone === 'right' && <div className="absolute top-0 bottom-0 -right-1 w-1.5 bg-blue-500 rounded-full z-40 pointer-events-none" />}
+      {dropZone === 'before' && (
+        <div className="absolute -top-3 left-0 right-0 z-40 flex justify-center pointer-events-none">
+          <div className="h-0.5 w-full bg-blue-500 rounded-full absolute top-1.5" />
+          <span className="bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap relative">↑ 放在上方</span>
+        </div>
+      )}
+      {dropZone === 'after' && (
+        <div className="absolute -bottom-3 left-0 right-0 z-40 flex justify-center pointer-events-none">
+          <div className="h-0.5 w-full bg-blue-500 rounded-full absolute top-1.5" />
+          <span className="bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap relative">↓ 放在下方</span>
+        </div>
+      )}
+      {dropZone === 'inside' && (
+        <>
+          <div className="absolute inset-0 border-2 border-blue-500 rounded z-40 pointer-events-none bg-blue-50/20" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 pointer-events-none">
+            <span className="bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap">放入内部</span>
+          </div>
+        </>
+      )}
+      {dropZone === 'left' && (
+        <div className="absolute top-0 bottom-0 -left-1 w-1.5 bg-blue-500 rounded-full z-40 pointer-events-none flex items-center justify-center">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap">← 左侧并排</span>
+        </div>
+      )}
+      {dropZone === 'right' && (
+        <div className="absolute top-0 bottom-0 -right-1 w-1.5 bg-blue-500 rounded-full z-40 pointer-events-none flex items-center justify-center">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap">右侧并排 →</span>
+        </div>
+      )}
     </>
   );
 
@@ -287,6 +313,7 @@ export default function CanvasNodeEditor(props: Props) {
     onPickGallery,
     onResize,
     onAddChild,
+    onQuickAddImage,
     onDropOnNode,
     onMoveNode,
   });
@@ -308,15 +335,51 @@ export default function CanvasNodeEditor(props: Props) {
         {selected && <SelectMenu />}
         <DropZoneIndicators />
         {node.children.length === 0 && <div className="text-xs text-[#b8b4ae] px-2 py-4 flex-1">选中后从下方添加「列」</div>}
-        {node.children.map(c => {
+        {node.children.map((c, i) => {
           const basis = c.props?.flexBasis || '1';
           const flexVal = basis === 'auto' ? '0 0 auto' : `${basis} 1 0`;
           return (
             <div key={c.id} style={{ flex: flexVal, minWidth: 0 }} className="relative">
               <CanvasNodeEditor {...childProps(c, { flexParentId: c.id, flexParentBasis: basis })} />
+              {/* Column resize bar - between this column and the next */}
+              {i < node.children.length - 1 && !preview && (
+                <div
+                  onPointerDown={(e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    const startX = e.clientX;
+                    const currentBasis = parseFloat(basis) || 1;
+                    const containerW = boxRef.current?.offsetWidth || 800;
+                    const move = (ev: PointerEvent) => {
+                      const dx = ev.clientX - startX;
+                      const deltaRatio = dx / containerW;
+                      const newBasis = Math.max(0.1, Math.min(10, currentBasis + deltaRatio * 3));
+                      onResize(c.id, { flexBasis: newBasis.toFixed(2) });
+                    };
+                    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+                    window.addEventListener('pointermove', move);
+                    window.addEventListener('pointerup', up);
+                  }}
+                  className="absolute top-0 -right-4 bottom-0 w-4 cursor-col-resize z-30 group/col-resize"
+                  title="拖动调整列宽"
+                  style={{ touchAction: 'none' }}
+                >
+                  <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-1 h-16 rounded-full bg-[#d8d4cc] group-hover/col-resize:bg-[#4a90e2] transition-colors" />
+                </div>
+              )}
             </div>
           );
         })}
+        {/* Quick add image column */}
+        {!preview && (selected || hovered) && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onQuickAddImage(node.id); }}
+            className="flex-shrink-0 w-10 min-h-[60px] flex flex-col items-center justify-center text-[#b8b4ae] hover:text-[#4a90e2] hover:bg-[#f0f7ff] rounded border-2 border-dashed border-[#d8d4cc] hover:border-[#4a90e2] transition-all"
+            title="添加图片列"
+          >
+            <span className="text-lg leading-none">+</span>
+            <span className="text-[8px] mt-0.5">图片</span>
+          </button>
+        )}
         <AddContentBar />
       </div>
     );

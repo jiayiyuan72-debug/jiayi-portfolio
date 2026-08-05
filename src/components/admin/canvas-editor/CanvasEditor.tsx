@@ -433,6 +433,13 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
       setSelectedId(node.id);
       if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
     },
+    onQuickAddImage: (parentId: string) => {
+      const col = defaultColumnNode('1');
+      const img = defaultCanvasNode('image');
+      col.children = [img];
+      setTree(addChild(trees, parentId, col));
+      setSelectedId(img.id);
+    },
   };
 
   return (
