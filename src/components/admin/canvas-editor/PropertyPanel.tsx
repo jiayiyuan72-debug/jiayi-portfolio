@@ -26,7 +26,7 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
   const set = (patch: Record<string, any>) => onChange({ ...node, props: { ...p, ...patch } });
 
   return (
-    <div className="w-64 bg-white border-l border-[#e8e4de] flex flex-col overflow-hidden flex-shrink-0">
+    <div className="w-56 bg-white border-l border-[#e8e4de] flex flex-col overflow-hidden flex-shrink-0">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-[#e8e4de] flex-shrink-0">
         <p className="text-sm font-medium text-[#2d2a24]">{CANVAS_TYPE_LABELS[node.type].icon} {CANVAS_TYPE_LABELS[node.type].label}</p>
@@ -245,7 +245,7 @@ function SectionSettings({ section, onUpdate, onSave }: { section: Section; onUp
   };
 
   return (
-    <div className="w-64 bg-white border-l border-[#e8e4de] flex flex-col overflow-hidden flex-shrink-0">
+    <div className="w-56 bg-white border-l border-[#e8e4de] flex flex-col overflow-hidden flex-shrink-0">
       <div className="px-3 py-2 border-b border-[#e8e4de] flex-shrink-0">
         <p className="text-sm font-medium text-[#2d2a24]">板块设置</p>
         <p className="text-[10px] text-[#b8b4ae] mt-0.5">选中画板元素查看元素属性</p>

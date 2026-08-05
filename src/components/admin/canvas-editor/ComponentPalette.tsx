@@ -43,7 +43,7 @@ export default function ComponentPalette({ onAddClick, onAddTemplate }: Props) {
   );
 
   return (
-    <div className="w-48 bg-white border-r border-[#e8e4de] p-3 overflow-y-auto flex-shrink-0">
+    <div className="w-40 bg-white border-r border-[#e8e4de] p-3 overflow-y-auto flex-shrink-0">
       {/* 布局模板 */}
       <p className="text-xs font-medium text-[#2d2a24] mb-2">布局模板</p>
       <p className="text-[10px] text-[#b8b4ae] mb-1.5">一键插入常用布局</p>

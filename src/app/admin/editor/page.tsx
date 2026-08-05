@@ -190,7 +190,7 @@ function EditorPageInner() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-3.5rem)] md:h-screen overflow-hidden -m-4 sm:-m-6 lg:-m-8">
       <Toaster position="top-center" />
 
       {/* 左侧：板块列表 */}

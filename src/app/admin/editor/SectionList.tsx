@@ -40,7 +40,7 @@ export default function SectionList({ sections, selectedId, onSelect, onReorder,
   };
 
   return (
-    <div className="w-72 bg-white border-r border-[#e8e4de] flex flex-col overflow-hidden flex-shrink-0">
+    <div className="w-52 bg-white border-r border-[#e8e4de] flex flex-col overflow-hidden flex-shrink-0">
       <div className="p-4 border-b border-[#e8e4de]">
         <h2 className="text-sm font-bold text-[#2d2a24]">板块列表</h2>
         <p className="text-xs text-[#8b8b8b] mt-0.5">拖拽调整顺序</p>
