@@ -251,7 +251,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     return () => window.removeEventListener('beforeunload', before);
   }, [dirty]);
 
-  const boardW = mobile ? 375 : 960;
+  const boardW = mobile ? 375 : 1152;
 
   // Callbacks passed to CanvasNodeEditor (stable references via useCallback)
   const nodeCallbacks = {

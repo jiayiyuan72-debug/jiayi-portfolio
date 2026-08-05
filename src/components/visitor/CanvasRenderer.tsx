@@ -26,7 +26,7 @@ function pad(p: any) {
 function colFlex(p: any) {
   const basis = p.flexBasis || '1';
   if (basis === 'auto') return '0 0 auto';
-  return `${basis} 1 250px`;
+  return `${basis} 1 0`;
 }
 
 function NodeRenderer({ node, isRoot = false }: { node: CanvasNode; isRoot?: boolean }) {
@@ -55,7 +55,7 @@ function NodeRenderer({ node, isRoot = false }: { node: CanvasNode; isRoot?: boo
         alignItems: p.alignItems || 'stretch',
       }}>
         {node.children.map(c => (
-          <div key={c.id} style={{ flex: colFlex(c.props), minWidth: stack ? 200 : 0, maxWidth: '100%' }}>
+          <div key={c.id} style={{ flex: colFlex(c.props), minWidth: stack ? 120 : 0, maxWidth: '100%' }}>
             <NodeRenderer node={c} />
           </div>
         ))}
