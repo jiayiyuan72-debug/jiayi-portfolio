@@ -4,11 +4,12 @@ interface Props {
   nodes: CanvasNode[];
 }
 
-/** 
+/**
  * 访客端：读 fields.canvas_data 递归渲染容器树
- * - 根级节点强制 100% 宽度（忽略固定像素值）
- * - 容器内节点尊重设定宽度，但小于 150px 的固定宽度会被提升为 100%
- * - 流式布局 + 自适应高度 + 响应式
+ * - 根级节点强制 100% 宽度（填满容器）
+ * - 子节点尊重用户设定的宽度（px 或 %）
+ * - 图片高度：cover 模式用设定高度，其他用 auto
+ * - 响应式：row 在移动端自动堆叠
  */
 export default function CanvasRenderer({ nodes }: Props) {
   if (!Array.isArray(nodes)) return null;
@@ -28,30 +29,11 @@ function colFlex(p: any) {
   return `${basis} 1 250px`;
 }
 
-/** 清理宽度值：根级或过窄的固定像素宽度统一用 100% */
-function sanitizeWidth(rawWidth: string | undefined, isRoot: boolean): string {
-  if (!rawWidth || rawWidth === '100%' || rawWidth === 'auto') return '100%';
-  if (isRoot) return '100%';
-  // 解析像素值，小于 150px 的视为过窄
-  const pxMatch = rawWidth.match(/^(\d+(?:\.\d+)?)px$/);
-  if (pxMatch && parseFloat(pxMatch[1]) < 150) return '100%';
-  return rawWidth;
-}
-
-/** 清理高度值：图片节点的小固定高度会导致比例失调，统一用 auto */
-function sanitizeHeight(rawHeight: string | undefined, nodeType: string): string | undefined {
-  if (!rawHeight || rawHeight === 'auto') return undefined;
-  // 图片节点：固定像素高度会导致变形，统一用 auto（由图片自身比例决定）
-  if (nodeType === 'image') return undefined;
-  // 其他节点：尊重设定高度
-  return rawHeight;
-}
-
 function NodeRenderer({ node, isRoot = false }: { node: CanvasNode; isRoot?: boolean }) {
   const p = node.props || {};
   const style: React.CSSProperties = {
-    width: sanitizeWidth(p.width, isRoot),
-    height: sanitizeHeight(p.height, node.type),
+    width: isRoot ? '100%' : (p.width || '100%'),
+    height: p.height === 'auto' ? undefined : p.height,
     marginTop: p.marginTop ?? 0,
     marginRight: p.marginRight ?? 0,
     marginBottom: p.marginBottom ?? 12,
@@ -124,15 +106,21 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
     case 'image': {
       const c = node.content as any;
       if (!c?.src) return <div style={{ ...style, minHeight: 40, background: '#f5f5f0' }} />;
+      const fitMode = c.fitMode || 'fit-width';
+      // cover 模式尊重设定高度；其他模式高度自动
+      const imgContainerStyle: React.CSSProperties = { ...style };
+      if (fitMode !== 'cover' && imgContainerStyle.height) {
+        imgContainerStyle.height = 'auto';
+      }
       return (
-        <div style={style}>
+        <div style={imgContainerStyle}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={c.src} alt={c.alt || ''}
             style={{
-              width: c.fitMode === 'original' ? undefined : '100%',
-              maxWidth: c.fitMode === 'original' ? '100%' : undefined,
-              height: c.fitMode === 'cover' ? '100%' : 'auto',
-              objectFit: c.fitMode === 'cover' ? 'cover' : undefined,
+              width: fitMode === 'original' ? undefined : '100%',
+              maxWidth: fitMode === 'original' ? '100%' : undefined,
+              height: fitMode === 'cover' ? '100%' : 'auto',
+              objectFit: fitMode === 'cover' ? 'cover' : undefined,
               borderRadius: node.props.borderRadius ?? 0,
             }} />
           {c.caption && <div className="text-xs text-[#b8b4ae] mt-1 text-center">{c.caption}</div>}

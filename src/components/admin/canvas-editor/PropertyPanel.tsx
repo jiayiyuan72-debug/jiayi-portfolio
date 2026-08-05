@@ -44,6 +44,14 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
               <input value={p.height || 'auto'} onChange={(e) => set({ height: e.target.value })} className={inputCls} placeholder="auto / 200px" />
             </Field>
           </div>
+          <div className="flex gap-1 mt-1">
+            <button type="button" onClick={() => set({ width: '100%' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">100%</button>
+            <button type="button" onClick={() => set({ width: '50%' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">50%</button>
+            <button type="button" onClick={() => set({ width: '33.33%' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">1/3</button>
+            <button type="button" onClick={() => set({ width: '25%' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">1/4</button>
+            <button type="button" onClick={() => set({ width: '200px' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">200px</button>
+            <button type="button" onClick={() => set({ width: '300px' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">300px</button>
+          </div>
         </Section>
 
         {/* Spacing */}
