@@ -38,11 +38,20 @@ function sanitizeWidth(rawWidth: string | undefined, isRoot: boolean): string {
   return rawWidth;
 }
 
+/** 清理高度值：图片节点的小固定高度会导致比例失调，统一用 auto */
+function sanitizeHeight(rawHeight: string | undefined, nodeType: string): string | undefined {
+  if (!rawHeight || rawHeight === 'auto') return undefined;
+  // 图片节点：固定像素高度会导致变形，统一用 auto（由图片自身比例决定）
+  if (nodeType === 'image') return undefined;
+  // 其他节点：尊重设定高度
+  return rawHeight;
+}
+
 function NodeRenderer({ node, isRoot = false }: { node: CanvasNode; isRoot?: boolean }) {
   const p = node.props || {};
   const style: React.CSSProperties = {
     width: sanitizeWidth(p.width, isRoot),
-    height: p.height === 'auto' ? undefined : p.height,
+    height: sanitizeHeight(p.height, node.type),
     marginTop: p.marginTop ?? 0,
     marginRight: p.marginRight ?? 0,
     marginBottom: p.marginBottom ?? 12,
