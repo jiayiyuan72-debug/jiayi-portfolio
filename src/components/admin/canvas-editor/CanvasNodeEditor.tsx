@@ -199,6 +199,8 @@ export default function CanvasNodeEditor(props: Props) {
 
   const renderToolbar = () => (
     <div className="absolute -top-9 left-0 z-20 flex items-center gap-0.5 bg-black/80 text-white text-xs rounded-lg px-1.5 py-0.5 shadow" onMouseDown={(e) => e.preventDefault()} onMouseUp={(e) => e.stopPropagation()}>
+      {!editing && <span className="text-[9px] text-amber-300 px-1 select-none">双击编辑</span>}
+      {editing && <span className="text-[9px] text-green-300 px-1 select-none">编辑中</span>}
       <button onClick={() => document.execCommand('bold')} className="px-1 font-bold hover:opacity-70">B</button>
       <button onClick={() => document.execCommand('italic')} className="px-1 italic hover:opacity-70">I</button>
       <button onClick={() => document.execCommand('underline')} className="px-1 underline hover:opacity-70">U</button>
@@ -452,7 +454,7 @@ export default function CanvasNodeEditor(props: Props) {
   };
 
   return (
-    <div ref={boxRef} onClick={(e) => { e.stopPropagation(); onSelectId(node.id); }} onDoubleClick={handleDoubleClick}
+    <div ref={boxRef} onClick={(e) => { e.stopPropagation(); if (selected && isEditable && !editing) { onEditId(node.id); } else { onSelectId(node.id); } }} onDoubleClick={handleDoubleClick}
       onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
       className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'border border-transparent hover:border-[#4a90e2]/40 hover:ring-1 hover:ring-[#4a90e2]/30'} rounded`}
       style={leafStyle}
@@ -463,12 +465,12 @@ export default function CanvasNodeEditor(props: Props) {
 
       {/* Content rendering */}
       {node.type === 'text' ? (
-        <div className={`text-sm ${editing ? 'outline-none ring-1 ring-green-400' : ''}`} style={{ lineHeight: 1.7 }}
+        <div className={`text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30 cursor-text' : 'cursor-text'}`} style={{ lineHeight: 1.7 }}
           contentEditable={editing || undefined} suppressContentEditableWarning
           onBlur={(e) => { onUpdateContent(node.id, { html: e.currentTarget.innerHTML }); onStopEdit(); }}
-          dangerouslySetInnerHTML={{ __html: editing ? contentHtml : contentHtml }} />
+          dangerouslySetInnerHTML={{ __html: contentHtml }} />
       ) : node.type === 'quote' ? (
-        <div className={`border-l-4 border-[#d4a574] bg-[#f8f5f0] px-3 py-2 text-sm ${editing ? 'outline-none ring-1 ring-green-400' : ''}`} style={{ lineHeight: 1.7 }}
+        <div className={`border-l-4 border-[#d4a574] bg-[#f8f5f0] px-3 py-2 text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30 cursor-text' : 'cursor-text'}`} style={{ lineHeight: 1.7 }}
           contentEditable={editing || undefined} suppressContentEditableWarning
           onBlur={(e) => { onUpdateContent(node.id, { html: e.currentTarget.innerHTML }); onStopEdit(); }}
           dangerouslySetInnerHTML={{ __html: contentHtml }} />
