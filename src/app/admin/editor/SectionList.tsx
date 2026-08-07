@@ -19,9 +19,11 @@ interface Props {
   onDelete: (id: string) => void;
   onAdd: () => void;
   onToggleVisibility: (id: string) => void;
+  onMoveUp: (id: string) => void;
+  onMoveDown: (id: string) => void;
 }
 
-export default function SectionList({ sections, selectedId, onSelect, onReorder, onDelete, onAdd, onToggleVisibility }: Props) {
+export default function SectionList({ sections, selectedId, onSelect, onReorder, onDelete, onAdd, onToggleVisibility, onMoveUp, onMoveDown }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -49,14 +51,18 @@ export default function SectionList({ sections, selectedId, onSelect, onReorder,
       <div className="flex-1 overflow-y-auto p-2">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
-            {sections.map(section => (
+            {sections.map((section, index) => (
               <SortableSectionItem
                 key={section.id}
                 section={section}
+                index={index}
+                total={sections.length}
                 isSelected={section.id === selectedId}
                 onSelect={() => onSelect(section.id)}
                 onDelete={() => onDelete(section.id)}
                 onToggleVisibility={() => onToggleVisibility(section.id)}
+                onMoveUp={() => onMoveUp(section.id)}
+                onMoveDown={() => onMoveDown(section.id)}
               />
             ))}
           </SortableContext>
@@ -80,9 +86,9 @@ export default function SectionList({ sections, selectedId, onSelect, onReorder,
 }
 
 function SortableSectionItem({
-  section, isSelected, onSelect, onDelete, onToggleVisibility,
+  section, isSelected, onSelect, onDelete, onToggleVisibility, onMoveUp, onMoveDown, index, total,
 }: {
-  section: Section; isSelected: boolean; onSelect: () => void; onDelete: () => void; onToggleVisibility: () => void;
+  section: Section; isSelected: boolean; onSelect: () => void; onDelete: () => void; onToggleVisibility: () => void; onMoveUp: () => void; onMoveDown: () => void; index: number; total: number;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
@@ -118,7 +124,23 @@ function SortableSectionItem({
       </div>
 
       {showActions && (
-        <div className="absolute right-2 top-2 flex gap-1">
+        <div className="absolute right-2 top-2 flex gap-0.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+            disabled={index === 0}
+            className="w-6 h-6 flex items-center justify-center rounded text-xs bg-white/80 hover:bg-white shadow-sm disabled:opacity-30"
+            title="上移"
+          >
+            ↑
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+            disabled={index === total - 1}
+            className="w-6 h-6 flex items-center justify-center rounded text-xs bg-white/80 hover:bg-white shadow-sm disabled:opacity-30"
+            title="下移"
+          >
+            ↓
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); onToggleVisibility(); }}
             className="w-6 h-6 flex items-center justify-center rounded text-xs bg-white/80 hover:bg-white shadow-sm"

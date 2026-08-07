@@ -100,7 +100,17 @@ function EditorPageInner() {
   };
 
   const handleSectionCreated = (section: Section) => {
-    setSections(prev => [...prev, section]);
+    setSections(prev => {
+      if (selectedSectionId) {
+        const idx = prev.findIndex(s => s.id === selectedSectionId);
+        if (idx >= 0) {
+          const next = [...prev];
+          next.splice(idx + 1, 0, section);
+          return next;
+        }
+      }
+      return [...prev, section];
+    });
     setSelectedSectionId(section.id);
     setShowCreate(false);
   };
@@ -201,6 +211,22 @@ function EditorPageInner() {
         onReorder={handleSectionsReordered}
         onDelete={handleSectionDeleted}
         onAdd={() => setShowCreate(true)}
+        onMoveUp={(id) => {
+          const idx = sections.findIndex(s => s.id === id);
+          if (idx > 0) {
+            const reordered = [...sections];
+            [reordered[idx - 1], reordered[idx]] = [reordered[idx], reordered[idx - 1]];
+            handleSectionsReordered(reordered);
+          }
+        }}
+        onMoveDown={(id) => {
+          const idx = sections.findIndex(s => s.id === id);
+          if (idx < sections.length - 1) {
+            const reordered = [...sections];
+            [reordered[idx + 1], reordered[idx]] = [reordered[idx], reordered[idx + 1]];
+            handleSectionsReordered(reordered);
+          }
+        }}
         onToggleVisibility={async (id) => {
           const section = sections.find(s => s.id === id);
           if (!section) return;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { CanvasNode, CanvasType, CANVAS_TYPE_LABELS, LAYOUT_TYPES, canNest, CAN_NEST_IN, TemplateId } from '@/types/canvas';
 
 /** 5-way drop position: before / after / inside / left / right */
@@ -454,7 +454,7 @@ export default function CanvasNodeEditor(props: Props) {
   };
 
   return (
-    <div ref={boxRef} onClick={(e) => { e.stopPropagation(); if (selected && isEditable && !editing) { onEditId(node.id); } else { onSelectId(node.id); } }} onDoubleClick={handleDoubleClick}
+    <div ref={boxRef} onClick={(e) => { e.stopPropagation(); if (!editing && selected && isEditable) { onEditId(node.id); } else if (!editing) { onSelectId(node.id); } }} onDoubleClick={handleDoubleClick}
       onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
       className={`relative ${selected ? 'ring-2 ring-[#4a90e2]' : 'border border-transparent hover:border-[#4a90e2]/40 hover:ring-1 hover:ring-[#4a90e2]/30'} rounded`}
       style={leafStyle}
@@ -465,15 +465,21 @@ export default function CanvasNodeEditor(props: Props) {
 
       {/* Content rendering */}
       {node.type === 'text' ? (
-        <div className={`text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30 cursor-text' : 'cursor-text'}`} style={{ lineHeight: 1.7 }}
-          contentEditable={editing || undefined} suppressContentEditableWarning
-          onBlur={(e) => { onUpdateContent(node.id, { html: e.currentTarget.innerHTML }); onStopEdit(); }}
-          dangerouslySetInnerHTML={{ __html: contentHtml }} />
+        <EditableText
+          html={contentHtml}
+          editing={editing}
+          className={`text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30' : ''} cursor-text`}
+          style={{ lineHeight: 1.7 }}
+          onSave={(html) => { onUpdateContent(node.id, { html }); onStopEdit(); }}
+        />
       ) : node.type === 'quote' ? (
-        <div className={`border-l-4 border-[#d4a574] bg-[#f8f5f0] px-3 py-2 text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30 cursor-text' : 'cursor-text'}`} style={{ lineHeight: 1.7 }}
-          contentEditable={editing || undefined} suppressContentEditableWarning
-          onBlur={(e) => { onUpdateContent(node.id, { html: e.currentTarget.innerHTML }); onStopEdit(); }}
-          dangerouslySetInnerHTML={{ __html: contentHtml }} />
+        <EditableText
+          html={contentHtml}
+          editing={editing}
+          className={`border-l-4 border-[#d4a574] bg-[#f8f5f0] px-3 py-2 text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30' : ''} cursor-text`}
+          style={{ lineHeight: 1.7 }}
+          onSave={(html) => { onUpdateContent(node.id, { html }); onStopEdit(); }}
+        />
       ) : node.type === 'image' ? (
         (node.content as any)?.src
           ? <div className="relative">
@@ -532,6 +538,55 @@ export default function CanvasNodeEditor(props: Props) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Editable text component: separates editing mode (ref-based) from display mode (dangerouslySetInnerHTML) */
+function EditableText({ html, editing, className, style, onSave }: {
+  html: string;
+  editing: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+  onSave: (html: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (editing && ref.current) {
+      // Set content via ref to avoid React re-rendering the contentEditable
+      ref.current.innerHTML = html;
+      // Focus and move cursor to end
+      ref.current.focus();
+      const range = document.createRange();
+      range.selectNodeContents(ref.current);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
+
+  if (editing) {
+    return (
+      <div
+        ref={ref}
+        className={className}
+        style={style}
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => onSave(e.currentTarget.innerHTML)}
+        onMouseDown={(e) => e.stopPropagation()}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={className}
+      style={style}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
