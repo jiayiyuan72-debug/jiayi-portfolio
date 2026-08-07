@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Toaster, toast } from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
         throw new Error(err.error || '密码错误');
       }
 
-      toast.success('登录成功！');
+      toast.success('登录成功！', { duration: 1500 });
       // 稍等一会，让 cookie 设置完成
       setTimeout(() => {
         router.push('/admin/sections');
@@ -48,8 +48,6 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#faf7f2] px-4">
-      <Toaster position="top-center" />
-
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-[#2d2a24] tracking-wider">

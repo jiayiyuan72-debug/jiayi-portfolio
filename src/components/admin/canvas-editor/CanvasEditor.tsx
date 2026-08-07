@@ -230,10 +230,47 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     const sel = selectedId ? findNode(trees, selectedId) : null;
     if (sel && LAYOUT_TYPES.includes(sel.type)) {
       setTree(addChild(trees, selectedId!, node));
+    } else if (sel) {
+      // Insert as sibling after the selected leaf node (not just append to root)
+      setTree(addSibling(trees, selectedId!, node, 'after'));
     } else {
       setTree([...trees, node]);
     }
     setSelectedId(null);
+  };
+
+  // ---- Insert at specific root-level index (for top/between drop zones) ----
+  const insertAt = (index: number, type: CanvasType | TemplateId, isTemplate?: boolean) => {
+    if (isTemplate) {
+      const node = createTemplate(type as TemplateId);
+      const next = [...trees];
+      next.splice(index, 0, node);
+      setTree(next);
+      setSelectedId(null);
+    } else {
+      const node = defaultCanvasNode(type as CanvasType);
+      const next = [...trees];
+      next.splice(index, 0, node);
+      setTree(next);
+      setSelectedId(node.id);
+      if (node.type === 'text' || node.type === 'quote') setEditingId(node.id);
+    }
+  };
+
+  // ---- Insert a new node before a specific node (for "insert above" button) ----
+  const insertBefore = (id: string) => {
+    const node = defaultCanvasNode('section');
+    const insertSiblingBefore = (list: CanvasNode[]): CanvasNode[] => {
+      const i = list.findIndex(n => n.id === id);
+      if (i >= 0) {
+        const next = [...list];
+        next.splice(i, 0, node);
+        return next;
+      }
+      return list.map(n => ({ ...n, children: insertSiblingBefore(n.children) }));
+    };
+    setTree(insertSiblingBefore(trees));
+    setSelectedId(node.id);
   };
 
   // HTML5 drag-and-drop on canvas (fallback for drops on empty canvas space)
@@ -440,6 +477,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
       setTree(addChild(trees, parentId, col));
       setSelectedId(img.id);
     },
+    onInsertBefore: insertBefore,
   };
 
   return (
@@ -480,16 +518,53 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
                 <div className="mt-2 text-xs">拖拽元素到另一个元素的左侧/右侧可自动并排显示</div>
               </div>
             )}
-            {trees.map(n => (
-              <CanvasNodeEditor
-                key={n.id}
-                node={n}
-                selectedId={selectedId}
-                editingId={editingId}
-                depth={1}
-                preview={preview}
-                {...nodeCallbacks}
-              />
+            {/* Top drop zone - always visible when there's content */}
+            {trees.length > 0 && !preview && (
+              <div
+                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const type = e.dataTransfer.getData('application/x-canvas-type') as CanvasType;
+                  const templateId = e.dataTransfer.getData('application/x-canvas-template') as TemplateId;
+                  if (templateId) { insertAt(0, templateId, true); return; }
+                  if (type) { insertAt(0, type, false); }
+                }}
+                className="border-2 border-dashed border-[#d8d4cc] hover:border-[#4a90e2] rounded-lg py-1.5 mb-2 text-center text-[10px] text-[#b8b4ae] hover:text-[#4a90e2] hover:bg-[#f0f7ff] transition-all cursor-pointer"
+              >
+                + 添加到顶部（拖入组件或布局模板）
+              </div>
+            )}
+            {trees.map((n, i) => (
+              <div key={n.id}>
+                <CanvasNodeEditor
+                  node={n}
+                  selectedId={selectedId}
+                  editingId={editingId}
+                  depth={1}
+                  preview={preview}
+                  {...nodeCallbacks}
+                />
+                {/* Insert bar between root-level nodes */}
+                {!preview && i < trees.length - 1 && (
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const type = e.dataTransfer.getData('application/x-canvas-type') as CanvasType;
+                      const templateId = e.dataTransfer.getData('application/x-canvas-template') as TemplateId;
+                      if (templateId) { insertAt(i + 1, templateId, true); return; }
+                      if (type) { insertAt(i + 1, type, false); }
+                    }}
+                    className="group/insert h-1 hover:h-7 transition-all duration-150 flex items-center justify-center my-0.5"
+                  >
+                    <div className="w-full border-2 border-dashed border-transparent group-hover/insert:border-[#4a90e2] rounded-lg py-0.5 text-center text-[10px] text-[#4a90e2] opacity-0 group-hover/insert:opacity-100 bg-[#f0f7ff] transition-all">
+                      + 插入到此处
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>

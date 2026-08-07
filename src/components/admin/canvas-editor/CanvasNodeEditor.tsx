@@ -21,6 +21,7 @@ interface NodeCallbacks {
   onQuickAddImage: (parentId: string) => void;
   onDropOnNode: (nodeId: string, position: DropPosition, type: CanvasType | TemplateId, isTemplate?: boolean) => void;
   onMoveNode: (sourceId: string, targetId: string, position: DropPosition) => void;
+  onInsertBefore: (id: string) => void;
 }
 
 interface Props extends NodeCallbacks {
@@ -37,7 +38,7 @@ const EDITABLE_TYPES = ['text', 'quote'];
 
 /** Single canvas node: recursive render with proper child selection */
 export default function CanvasNodeEditor(props: Props) {
-  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild, onQuickAddImage, onDropOnNode, onMoveNode, flexParentId, flexParentBasis } = props;
+  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild, onQuickAddImage, onDropOnNode, onMoveNode, onInsertBefore, flexParentId, flexParentBasis } = props;
 
   const p = node.props || {};
   const isEditable = EDITABLE_TYPES.includes(node.type);
@@ -273,6 +274,7 @@ export default function CanvasNodeEditor(props: Props) {
 
   const SelectMenu = () => (
     <div className="absolute -top-8 right-0 z-30 flex items-center gap-0.5 bg-[#2d2a24] text-white text-[10px] rounded-lg px-1 py-0.5 shadow">
+      <button onClick={(e) => { e.stopPropagation(); onInsertBefore(node.id); }} className="px-1 hover:opacity-70 text-blue-300" title="在上方插入区块">↑+</button>
       <button onClick={(e) => { e.stopPropagation(); onDuplicate(node.id); }} className="px-1 hover:opacity-70" title="复制">⧉</button>
       <button onClick={(e) => { e.stopPropagation(); onMoveOrder(node.id, -1); }} className="px-1 hover:opacity-70" title="上移">↑</button>
       <button onClick={(e) => { e.stopPropagation(); onMoveOrder(node.id, 1); }} className="px-1 hover:opacity-70" title="下移">↓</button>
@@ -376,6 +378,7 @@ export default function CanvasNodeEditor(props: Props) {
     onQuickAddImage,
     onDropOnNode,
     onMoveNode,
+    onInsertBefore,
   });
 
   // ---- PREVIEW MODE: render real content without editing UI ----
@@ -509,6 +512,8 @@ export default function CanvasNodeEditor(props: Props) {
     position: 'relative',
     minHeight: node.type === 'spacer' ? undefined : 24,
     cursor: isEditable || isImage ? 'text' : 'default',
+    overflow: 'visible',
+    isolation: editing ? 'isolate' : undefined,
   };
 
   return (
@@ -526,7 +531,7 @@ export default function CanvasNodeEditor(props: Props) {
         <EditableText
           html={contentHtml}
           editing={editing}
-          className={`text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30' : ''} cursor-text`}
+          className={`text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-white relative z-10' : ''} cursor-text`}
           style={{ lineHeight: 1.7, ...typoStyle }}
           onSave={(html) => { onUpdateContent(node.id, { html }); onStopEdit(); }}
         />
@@ -534,7 +539,7 @@ export default function CanvasNodeEditor(props: Props) {
         <EditableText
           html={contentHtml}
           editing={editing}
-          className={`border-l-4 border-[#d4a574] bg-[#f8f5f0] px-3 py-2 text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30' : ''} cursor-text`}
+          className={`border-l-4 border-[#d4a574] bg-[#f8f5f0] px-3 py-2 text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-white relative z-10' : ''} cursor-text`}
           style={{ lineHeight: 1.7, ...typoStyle }}
           onSave={(html) => { onUpdateContent(node.id, { html }); onStopEdit(); }}
         />

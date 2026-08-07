@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Toaster, toast } from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 import { Section } from '@/types/section';
 import { ContentItem } from '@/types/content';
 import SectionList from './SectionList';
@@ -201,8 +201,6 @@ function EditorPageInner() {
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] md:h-screen overflow-hidden -m-4 sm:-m-6 lg:-m-8">
-      <Toaster position="top-center" />
-
       {/* 左侧：板块列表 */}
       <SectionList
         sections={sections}
