@@ -162,6 +162,109 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
       return <hr style={{ ...style, border: 'none', borderTop: `${node.props.lineWidth ?? 1}px solid ${node.props.lineColor || '#e8e6e0'}` }} />;
     case 'spacer':
       return <div style={{ ...style, height: node.props.height || '24px' }} />;
+    case 'timeline': {
+      const items = (node.content as any)?.items || [];
+      return (
+        <div style={style}>
+          <div style={{ position: 'relative', paddingLeft: 24 }}>
+            <div style={{ position: 'absolute', left: 8, top: 8, bottom: 8, width: 2, background: '#d4a574' }} />
+            {items.map((item: any, i: number) => (
+              <div key={i} style={{ position: 'relative', marginBottom: 16 }}>
+                <div style={{ position: 'absolute', left: -20, top: 4, width: 14, height: 14, borderRadius: '50%', background: '#d4a574', border: '2px solid #fff', boxShadow: '0 0 0 2px #d4a574' }} />
+                <div style={{ background: '#fff', borderRadius: 8, padding: '12px 16px', boxShadow: '0 1px 3px rgba(0,0,0,.06)', border: '1px solid #f0ede5' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: '#d4a574', fontWeight: 600 }}>{item.icon || '📌'} {item.date}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#2d2a24', marginBottom: 4 }}>{item.title}</div>
+                      <div style={{ fontSize: 13, color: '#5a5349', lineHeight: 1.6 }}>{item.description}</div>
+                    </div>
+                    {item.image && (
+                      <img src={item.image} alt={item.title || ''} style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    case 'skill-bar': {
+      const skills = (node.content as any)?.skills || [];
+      return (
+        <div style={{ ...style, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {skills.map((s: any, i: number) => (
+            <div key={i}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#2d2a24' }}>{s.name}</span>
+                <span style={{ fontSize: 12, color: '#8b8b8b' }}>{s.level}%</span>
+              </div>
+              <div style={{ height: 8, borderRadius: 4, background: '#f0ede5', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${s.level}%`, borderRadius: 4, background: s.color || '#4a90e2', transition: 'width 1.5s ease' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    case 'stats': {
+      const stats = (node.content as any)?.stats || [];
+      return (
+        <div style={{ ...style, display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'space-around' }}>
+          {stats.map((s: any, i: number) => (
+            <div key={i} style={{ textAlign: 'center', flex: '1 1 120px', minWidth: 120 }}>
+              <div style={{ fontSize: 32, marginBottom: 4 }}>{s.icon || '📊'}</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#2d2a24' }}>{s.value}{s.suffix}</div>
+              <div style={{ fontSize: 13, color: '#8b8b8b', marginTop: 2 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    case 'tags': {
+      const tags = (node.content as any)?.tags || [];
+      const color = (node.content as any)?.color || '#4a90e2';
+      return (
+        <div style={{ ...style, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {tags.map((tag: string, i: number) => (
+            <span key={i} style={{ fontSize: 13, padding: '4px 12px', borderRadius: 999, background: `${color}15`, color, border: `1px solid ${color}30` }}>{tag}</span>
+          ))}
+        </div>
+      );
+    }
+    case 'video': {
+      const c = node.content as any;
+      const url = c?.url || '';
+      const platform = c?.platform || 'youtube';
+      if (!url) return <div style={{ ...style, minHeight: 200, background: '#f5f5f0', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8b4ae', fontSize: 14 }} />;
+      let embedUrl = url;
+      if (platform === 'youtube') { const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/); if (m) embedUrl = `https://www.youtube.com/embed/${m[1]}`; }
+      else if (platform === 'bilibili') { const m = url.match(/bilibili\.com\/video\/(BV[\w]+)/); if (m) embedUrl = `https://player.bilibili.com/player.html?bvid=${m[1]}`; }
+      return (
+        <div style={{ ...style, position: 'relative', paddingBottom: '56.25%', height: 0, borderRadius: 12, overflow: 'hidden' }}>
+          <iframe src={embedUrl} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }} allowFullScreen />
+        </div>
+      );
+    }
+    case 'accordion': {
+      const panels = (node.content as any)?.panels || [];
+      return (
+        <div style={{ ...style, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {panels.map((panel: any, i: number) => (
+            <details key={i} style={{ borderRadius: 8, border: '1px solid #e8e6e0', overflow: 'hidden' }} open={i === 0}>
+              <summary style={{ padding: '12px 16px', cursor: 'pointer', fontWeight: 500, fontSize: 14, color: '#2d2a24', background: '#faf9f6', listStyle: 'none' }}>
+                {panel.title}
+              </summary>
+              <div style={{ padding: '12px 16px', fontSize: 13, color: '#5a5349', lineHeight: 1.6, background: '#fff' }}>
+                {panel.content}
+              </div>
+            </details>
+          ))}
+        </div>
+      );
+    }
     default:
       return <div style={style} />;
   }

@@ -339,6 +339,7 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
                       <input value={item.title} onChange={(e) => { const items = [...(node.content as any).items]; items[i] = { ...item, title: e.target.value }; onContentChange({ ...(node.content || {}), items }); }} className={inputCls} placeholder="标题" style={{ width: '40%' }} />
                     </div>
                     <input value={item.description} onChange={(e) => { const items = [...(node.content as any).items]; items[i] = { ...item, description: e.target.value }; onContentChange({ ...(node.content || {}), items }); }} className={inputCls} placeholder="描述" />
+                    <input value={item.image || ''} onChange={(e) => { const items = [...(node.content as any).items]; items[i] = { ...item, image: e.target.value }; onContentChange({ ...(node.content || {}), items }); }} className={inputCls} placeholder="图片链接（可选，留空则不显示）" />
                     <button type="button" onClick={() => { const items = [...(node.content as any).items]; items.splice(i, 1); onContentChange({ ...(node.content || {}), items }); }} className="text-[10px] text-red-500 hover:text-red-700">删除此项</button>
                   </div>
                 ))}

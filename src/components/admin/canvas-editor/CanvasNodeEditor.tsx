@@ -684,8 +684,15 @@ function TimelinePreview({ node }: { node: CanvasNode }) {
           <div style={{ position: 'absolute', left: -20, top: 4, width: 14, height: 14, borderRadius: '50%', background: '#d4a574', border: '2px solid #fff', boxShadow: '0 0 0 2px #d4a574' }} />
           <div style={{ background: '#fff', borderRadius: 8, padding: '10px 14px', border: '1px solid #f0ede5' }}>
             <div style={{ fontSize: 11, color: '#d4a574', fontWeight: 600, marginBottom: 2 }}>{item.icon} {item.date}</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#2d2a24', marginBottom: 2 }}>{item.title}</div>
-            <div style={{ fontSize: 12, color: '#5a5349' }}>{item.description}</div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#2d2a24', marginBottom: 2 }}>{item.title}</div>
+                <div style={{ fontSize: 12, color: '#5a5349' }}>{item.description}</div>
+              </div>
+              {item.image && (
+                <img src={item.image} alt="" style={{ width: 60, height: 60, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+              )}
+            </div>
           </div>
         </div>
       ))}
@@ -910,8 +917,15 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <span style={{ fontSize: 12, color: '#d4a574', fontWeight: 600 }}>{item.icon || '📌'} {item.date}</span>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#2d2a24', marginBottom: 4 }}>{item.title}</div>
-                  <div style={{ fontSize: 13, color: '#5a5349', lineHeight: 1.6 }}>{item.description}</div>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#2d2a24', marginBottom: 4 }}>{item.title}</div>
+                      <div style={{ fontSize: 13, color: '#5a5349', lineHeight: 1.6 }}>{item.description}</div>
+                    </div>
+                    {item.image && (
+                      <img src={item.image} alt={item.title || ''} style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
