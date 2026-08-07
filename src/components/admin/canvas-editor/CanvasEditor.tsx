@@ -10,7 +10,7 @@ import PropertyPanel from './PropertyPanel';
 
 interface Props {
   trees: CanvasNode[];
-  onSave: (trees: CanvasNode[]) => void;
+  onSave: (trees: CanvasNode[]) => Promise<boolean>;
   sectionName: string;
   sectionId: string;
   section: Section;
@@ -168,6 +168,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [canvasSaving, setCanvasSaving] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const setTree = useCallback((next: CanvasNode[], record = true) => {
@@ -441,7 +442,23 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trees, selectedId, editingId]);
 
-  const save = () => { if (dirty || trees.length) { onSave(trees); setDirty(false); toast.success('已保存'); } };
+  const save = async () => {
+    if (!dirty && !trees.length) return;
+    setCanvasSaving(true);
+    try {
+      const ok = await onSave(trees);
+      if (ok) {
+        setDirty(false);
+        toast.success('已保存');
+      } else {
+        toast.error('保存失败，请检查网络或重新登录');
+      }
+    } catch {
+      toast.error('保存失败，请重试');
+    } finally {
+      setCanvasSaving(false);
+    }
+  };
   useEffect(() => {
     const before = (e: BeforeUnloadEvent) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };
     window.addEventListener('beforeunload', before);
@@ -494,8 +511,8 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
         <button onClick={undo} disabled={!pastRef.current.length} className="px-2 py-1 text-xs bg-[#f2f0ec] rounded disabled:opacity-40">撤销</button>
         <button onClick={redo} disabled={!futureRef.current.length} className="px-2 py-1 text-xs bg-[#f2f0ec] rounded disabled:opacity-40">重做</button>
         <div className="flex-1" />
-        {saving && <span className="text-xs text-[#8b8b8b]">保存中...</span>}
-        <button onClick={save} className="px-3 py-1 text-xs bg-[#2d2a24] text-white rounded">保存</button>
+        {(saving || canvasSaving) && <span className="text-xs text-[#8b8b8b]">保存中...</span>}
+        <button onClick={save} disabled={canvasSaving} className="px-3 py-1 text-xs bg-[#2d2a24] text-white rounded disabled:opacity-50">{canvasSaving ? "保存中..." : "保存"}</button>
       </div>
 
       <div className="flex flex-1 overflow-hidden min-h-0">

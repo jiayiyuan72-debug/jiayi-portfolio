@@ -37,20 +37,17 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const updateData: any = {
-      title: body.title,
-      content_type: body.content_type,
-      fields: body.fields,
-      body: body.body,
-      media_urls: body.media_urls,
-      file_urls: body.file_urls,
-      tags: body.tags,
-      sort_order: body.sort_order,
-      is_visible: body.is_visible,
-      status: body.status,
-      meta_title: body.meta_title,
-      meta_description: body.meta_description,
-    };
+    // Only include fields that are explicitly provided (not undefined)
+    // This prevents accidentally nullifying existing data
+    const updateData: any = {};
+    const fields = ['title', 'content_type', 'fields', 'body', 'media_urls',
+                    'file_urls', 'tags', 'sort_order', 'is_visible', 'status',
+                    'meta_title', 'meta_description'];
+    for (const f of fields) {
+      if (body[f] !== undefined) {
+        updateData[f] = body[f];
+      }
+    }
 
     // 如果发布状态变更，更新发布时间
     if (body.status === 'published' && body.published_at === undefined) {
@@ -68,7 +65,9 @@ export async function PUT(
     return NextResponse.json({ data });
   } catch (error: any) {
     console.error('PUT /api/content/[id] error:', error);
-    return NextResponse.json({ error: error.message }, { status: error.message === 'Unauthorized' ? 401 : 500 });
+    const status = error.message === 'Unauthorized' ? 401 : 500;
+    const msg = error.message === 'Unauthorized' ? '登录已过期，请重新登录' : error.message;
+    return NextResponse.json({ error: msg }, { status });
   }
 }
 

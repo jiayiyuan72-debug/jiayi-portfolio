@@ -146,8 +146,8 @@ function EditorPageInner() {
     return holder?.fields?.canvas_data || [];
   };
 
-  const saveCanvasData = useCallback(async (trees: any[]) => {
-    if (!selectedSectionId) return;
+  const saveCanvasData = useCallback(async (trees: any[]): Promise<boolean> => {
+    if (!selectedSectionId) return false;
     const items = getSectionContent(selectedSectionId);
     let holder = items.find(i => i.fields?.canvas_data) || items[0];
 
@@ -160,11 +160,15 @@ function EditorPageInner() {
         body: '',
         sort_order: 0,
       });
-      if (!newId) toast.error('保存失败：无法创建内容项');
-      return;
+      if (!newId) {
+        toast.error('保存失败：无法创建内容项');
+        return false;
+      }
+      return true;
     }
 
-    await saveContentItem(holder.id, { fields: { ...holder.fields, canvas_data: trees } });
+    const ok = await saveContentItem(holder.id, { fields: { ...holder.fields, canvas_data: trees } });
+    return ok;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSectionId, contentItems]);
 
