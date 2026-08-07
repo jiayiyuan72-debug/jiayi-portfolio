@@ -198,6 +198,117 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
           </Section>
         )}
 
+        {node.type === 'timeline' && (
+          <Section title="时间轴设置">
+            <Field label="时间轴项">
+              <div className="space-y-2">
+                {((node.content as any)?.items || []).map((item: any, i: number) => (
+                  <div key={i} className="border border-[#e8e4de] rounded p-2 space-y-1.5">
+                    <div className="flex gap-1">
+                      <input value={item.date} onChange={(e) => { const items = [...(node.content as any).items]; items[i] = { ...item, date: e.target.value }; onContentChange({ ...(node.content || {}), items }); }} className={inputCls} placeholder="日期" style={{ width: '40%' }} />
+                      <input value={item.icon} onChange={(e) => { const items = [...(node.content as any).items]; items[i] = { ...item, icon: e.target.value }; onContentChange({ ...(node.content || {}), items }); }} className={inputCls} placeholder="图标" style={{ width: '20%' }} />
+                      <input value={item.title} onChange={(e) => { const items = [...(node.content as any).items]; items[i] = { ...item, title: e.target.value }; onContentChange({ ...(node.content || {}), items }); }} className={inputCls} placeholder="标题" style={{ width: '40%' }} />
+                    </div>
+                    <input value={item.description} onChange={(e) => { const items = [...(node.content as any).items]; items[i] = { ...item, description: e.target.value }; onContentChange({ ...(node.content || {}), items }); }} className={inputCls} placeholder="描述" />
+                    <button type="button" onClick={() => { const items = [...(node.content as any).items]; items.splice(i, 1); onContentChange({ ...(node.content || {}), items }); }} className="text-[10px] text-red-500 hover:text-red-700">删除此项</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => { const items = [...((node.content as any)?.items || []), { date: '', title: '', description: '', icon: '📌' }]; onContentChange({ ...(node.content || {}), items }); }} className="w-full py-1 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">+ 添加时间轴项</button>
+              </div>
+            </Field>
+          </Section>
+        )}
+
+        {node.type === 'skill-bar' && (
+          <Section title="技能条设置">
+            <Field label="技能项">
+              <div className="space-y-2">
+                {((node.content as any)?.skills || []).map((s: any, i: number) => (
+                  <div key={i} className="border border-[#e8e4de] rounded p-2 space-y-1.5">
+                    <div className="flex gap-1">
+                      <input value={s.name} onChange={(e) => { const skills = [...(node.content as any).skills]; skills[i] = { ...s, name: e.target.value }; onContentChange({ ...(node.content || {}), skills }); }} className={inputCls} placeholder="技能名" style={{ width: '50%' }} />
+                      <input type="number" value={s.level} min={0} max={100} onChange={(e) => { const skills = [...(node.content as any).skills]; skills[i] = { ...s, level: Number(e.target.value) }; onContentChange({ ...(node.content || {}), skills }); }} className={numCls} placeholder="%" style={{ width: '30%' }} />
+                      <input type="color" value={s.color || '#4a90e2'} onChange={(e) => { const skills = [...(node.content as any).skills]; skills[i] = { ...s, color: e.target.value }; onContentChange({ ...(node.content || {}), skills }); }} className="w-8 h-8 rounded border border-[#e8e4de] cursor-pointer" style={{ width: '20%' }} />
+                    </div>
+                    <button type="button" onClick={() => { const skills = [...(node.content as any).skills]; skills.splice(i, 1); onContentChange({ ...(node.content || {}), skills }); }} className="text-[10px] text-red-500 hover:text-red-700">删除此项</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => { const skills = [...((node.content as any)?.skills || []), { name: '', level: 50, color: '#4a90e2' }]; onContentChange({ ...(node.content || {}), skills }); }} className="w-full py-1 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">+ 添加技能项</button>
+              </div>
+            </Field>
+          </Section>
+        )}
+
+        {node.type === 'stats' && (
+          <Section title="统计数字设置">
+            <Field label="统计项">
+              <div className="space-y-2">
+                {((node.content as any)?.stats || []).map((s: any, i: number) => (
+                  <div key={i} className="border border-[#e8e4de] rounded p-2 space-y-1.5">
+                    <div className="flex gap-1">
+                      <input value={s.icon} onChange={(e) => { const stats = [...(node.content as any).stats]; stats[i] = { ...s, icon: e.target.value }; onContentChange({ ...(node.content || {}), stats }); }} className={inputCls} placeholder="图标" style={{ width: '20%' }} />
+                      <input type="number" value={s.value} onChange={(e) => { const stats = [...(node.content as any).stats]; stats[i] = { ...s, value: Number(e.target.value) }; onContentChange({ ...(node.content || {}), stats }); }} className={numCls} placeholder="数值" style={{ width: '30%' }} />
+                      <input value={s.suffix} onChange={(e) => { const stats = [...(node.content as any).stats]; stats[i] = { ...s, suffix: e.target.value }; onContentChange({ ...(node.content || {}), stats }); }} className={inputCls} placeholder="后缀" style={{ width: '20%' }} />
+                      <input value={s.label} onChange={(e) => { const stats = [...(node.content as any).stats]; stats[i] = { ...s, label: e.target.value }; onContentChange({ ...(node.content || {}), stats }); }} className={inputCls} placeholder="标签" style={{ width: '30%' }} />
+                    </div>
+                    <button type="button" onClick={() => { const stats = [...(node.content as any).stats]; stats.splice(i, 1); onContentChange({ ...(node.content || {}), stats }); }} className="text-[10px] text-red-500 hover:text-red-700">删除此项</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => { const stats = [...((node.content as any)?.stats || []), { value: 0, suffix: '', label: '', icon: '📊' }]; onContentChange({ ...(node.content || {}), stats }); }} className="w-full py-1 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">+ 添加统计项</button>
+              </div>
+            </Field>
+          </Section>
+        )}
+
+        {node.type === 'tags' && (
+          <Section title="标签设置">
+            <Field label="标签（逗号分隔）">
+              <textarea value={((node.content as any)?.tags || []).join('，')} onChange={(e) => onContentChange({ ...(node.content || {}), tags: e.target.value.split(/[，,]/).map((t: string) => t.trim()).filter(Boolean) })} className={inputCls} rows={3} placeholder="React，TypeScript，Python" />
+            </Field>
+            <Field label="主题色">
+              <div className="flex items-center gap-2">
+                <input type="color" value={(node.content as any)?.color || '#4a90e2'} onChange={(e) => onContentChange({ ...(node.content || {}), color: e.target.value })} className="w-8 h-8 rounded border border-[#e8e4de] cursor-pointer" />
+                <input value={(node.content as any)?.color || '#4a90e2'} onChange={(e) => onContentChange({ ...(node.content || {}), color: e.target.value })} className={inputCls} placeholder="#4a90e2" />
+              </div>
+            </Field>
+          </Section>
+        )}
+
+        {node.type === 'video' && (
+          <Section title="视频设置">
+            <Field label="视频链接">
+              <input value={(node.content as any)?.url || ''} onChange={(e) => onContentChange({ ...(node.content || {}), url: e.target.value })} className={inputCls} placeholder="https://www.youtube.com/watch?v=..." />
+            </Field>
+            <Field label="平台">
+              <select value={(node.content as any)?.platform || 'youtube'} onChange={(e) => onContentChange({ ...(node.content || {}), platform: e.target.value })} className={inputCls}>
+                <option value="youtube">YouTube</option>
+                <option value="bilibili">Bilibili</option>
+                <option value="custom">自定义</option>
+              </select>
+            </Field>
+            <Field label="标题">
+              <input value={(node.content as any)?.title || ''} onChange={(e) => onContentChange({ ...(node.content || {}), title: e.target.value })} className={inputCls} />
+            </Field>
+          </Section>
+        )}
+
+        {node.type === 'accordion' && (
+          <Section title="折叠面板设置">
+            <Field label="面板项">
+              <div className="space-y-2">
+                {((node.content as any)?.panels || []).map((panel: any, i: number) => (
+                  <div key={i} className="border border-[#e8e4de] rounded p-2 space-y-1.5">
+                    <input value={panel.title} onChange={(e) => { const panels = [...(node.content as any).panels]; panels[i] = { ...panel, title: e.target.value }; onContentChange({ ...(node.content || {}), panels }); }} className={inputCls} placeholder="标题" />
+                    <textarea value={panel.content} onChange={(e) => { const panels = [...(node.content as any).panels]; panels[i] = { ...panel, content: e.target.value }; onContentChange({ ...(node.content || {}), panels }); }} className={inputCls} rows={2} placeholder="内容" />
+                    <button type="button" onClick={() => { const panels = [...(node.content as any).panels]; panels.splice(i, 1); onContentChange({ ...(node.content || {}), panels }); }} className="text-[10px] text-red-500 hover:text-red-700">删除此项</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => { const panels = [...((node.content as any)?.panels || []), { title: '', content: '' }]; onContentChange({ ...(node.content || {}), panels }); }} className="w-full py-1 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">+ 添加面板项</button>
+              </div>
+            </Field>
+          </Section>
+        )}
+
         {node.type === 'divider' && (
           <Section title="分隔线设置">
             <Field label="线宽">
