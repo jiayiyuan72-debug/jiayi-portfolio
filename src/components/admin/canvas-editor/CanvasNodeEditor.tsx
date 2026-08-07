@@ -50,6 +50,19 @@ export default function CanvasNodeEditor(props: Props) {
   const [dropZone, setDropZone] = useState<DropPosition | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
+  // Build typography style from props (only includes set values so defaults are preserved)
+  const typoStyle: React.CSSProperties = {};
+  if (p.fontFamily) typoStyle.fontFamily = p.fontFamily;
+  if (p.fontSize) typoStyle.fontSize = p.fontSize;
+  if (p.fontWeight) typoStyle.fontWeight = p.fontWeight;
+  if (p.fontStyle) typoStyle.fontStyle = p.fontStyle;
+  if (p.textDecoration) typoStyle.textDecoration = p.textDecoration;
+  if (p.color) typoStyle.color = p.color;
+  if (p.textAlign) typoStyle.textAlign = p.textAlign as React.CSSProperties['textAlign'];
+  if (p.lineHeight) typoStyle.lineHeight = p.lineHeight;
+  if (p.letterSpacing) typoStyle.letterSpacing = p.letterSpacing;
+  if (p.textTransform) typoStyle.textTransform = p.textTransform as any;
+
   const boxStyle: React.CSSProperties = {
     width: p.width || '100%',
     height: p.height === 'auto' ? undefined : p.height,
@@ -59,6 +72,7 @@ export default function CanvasNodeEditor(props: Props) {
     borderRadius: p.borderRadius ?? 0,
     boxSizing: 'border-box',
     textAlign: 'left',
+    ...typoStyle,
   };
 
   const handleDoubleClick = () => {
@@ -198,18 +212,62 @@ export default function CanvasNodeEditor(props: Props) {
   const contentHtml = (node.content as any)?.html || '';
 
   const renderToolbar = () => (
-    <div className="absolute -top-9 left-0 z-20 flex items-center gap-0.5 bg-black/80 text-white text-xs rounded-lg px-1.5 py-0.5 shadow" onMouseDown={(e) => e.preventDefault()} onMouseUp={(e) => e.stopPropagation()}>
+    <div className="absolute -top-9 left-0 z-20 flex items-center gap-0.5 bg-black/80 text-white text-xs rounded-lg px-1.5 py-0.5 shadow flex-wrap max-w-[420px]" onMouseDown={(e) => e.preventDefault()} onMouseUp={(e) => e.stopPropagation()}>
       {!editing && <span className="text-[9px] text-amber-300 px-1 select-none">双击编辑</span>}
       {editing && <span className="text-[9px] text-green-300 px-1 select-none">编辑中</span>}
-      <button onClick={() => document.execCommand('bold')} className="px-1 font-bold hover:opacity-70">B</button>
-      <button onClick={() => document.execCommand('italic')} className="px-1 italic hover:opacity-70">I</button>
-      <button onClick={() => document.execCommand('underline')} className="px-1 underline hover:opacity-70">U</button>
+      <button onClick={() => document.execCommand('bold')} className="px-1 font-bold hover:opacity-70" title="粗体">B</button>
+      <button onClick={() => document.execCommand('italic')} className="px-1 italic hover:opacity-70" title="斜体">I</button>
+      <button onClick={() => document.execCommand('underline')} className="px-1 underline hover:opacity-70" title="下划线">U</button>
+      <button onClick={() => document.execCommand('strikeThrough')} className="px-1 line-through hover:opacity-70" title="删除线">S</button>
       <span className="opacity-30">|</span>
       {['h1','h2','h3'].map(l => (
-        <button key={l} onClick={() => document.execCommand('formatBlock', false, l)} className="px-1 uppercase hover:opacity-70">{l}</button>
+        <button key={l} onClick={() => document.execCommand('formatBlock', false, l)} className="px-1 uppercase hover:opacity-70" title={`标题 ${l}`}>{l}</button>
       ))}
+      <button onClick={() => document.execCommand('formatBlock', false, 'p')} className="px-1 hover:opacity-70" title="正文段落">¶</button>
+      <button onClick={() => document.execCommand('formatBlock', false, 'blockquote')} className="px-1 hover:opacity-70" title="引用块">❝</button>
+      <span className="opacity-30">|</span>
+      <select
+        onChange={(e) => { document.execCommand('styleWithCSS', false, 'true'); document.execCommand('fontSize', false, e.target.value); e.target.selectedIndex = 0; }}
+        className="bg-black/60 text-white text-[10px] outline-none cursor-pointer rounded px-0.5"
+        defaultValue=""
+        title="字号"
+      >
+        <option value="" disabled>字号</option>
+        <option value="1">8px</option>
+        <option value="2">10px</option>
+        <option value="3">12px</option>
+        <option value="4">14px</option>
+        <option value="5">18px</option>
+        <option value="6">24px</option>
+        <option value="7">36px</option>
+      </select>
+      <label className="cursor-pointer relative" title="文字颜色">
+        <span className="text-[10px]">🎨</span>
+        <input
+          type="color"
+          onChange={(e) => document.execCommand('foreColor', false, e.target.value)}
+          className="absolute inset-0 opacity-0 cursor-pointer"
+          style={{ width: '100%', height: '100%' }}
+        />
+      </label>
+      <label className="cursor-pointer relative" title="背景色">
+        <span className="text-[10px]">🏷</span>
+        <input
+          type="color"
+          onChange={(e) => document.execCommand('hiliteColor', false, e.target.value)}
+          className="absolute inset-0 opacity-0 cursor-pointer"
+          style={{ width: '100%', height: '100%' }}
+        />
+      </label>
+      <span className="opacity-30">|</span>
+      <button onClick={() => document.execCommand('justifyLeft')} className="px-1 hover:opacity-70" title="左对齐">⬅</button>
+      <button onClick={() => document.execCommand('justifyCenter')} className="px-1 hover:opacity-70" title="居中">⬌</button>
+      <button onClick={() => document.execCommand('justifyRight')} className="px-1 hover:opacity-70" title="右对齐">➡</button>
+      <span className="opacity-30">|</span>
+      <button onClick={() => document.execCommand('insertUnorderedList')} className="px-1 hover:opacity-70" title="无序列表">•≡</button>
+      <button onClick={() => document.execCommand('insertOrderedList')} className="px-1 hover:opacity-70" title="有序列表">1≡</button>
       <button onClick={() => { const href = prompt('链接地址','https://'); if (href) document.execCommand('createLink', false, href); }} className="px-1 hover:opacity-70" title="链接">🔗</button>
-      <button onClick={() => document.execCommand('insertUnorderedList')} className="px-1 hover:opacity-70">•≡</button>
+      <button onClick={() => document.execCommand('removeFormat')} className="px-1 hover:opacity-70" title="清除格式">✕</button>
     </div>
   );
 
@@ -469,7 +527,7 @@ export default function CanvasNodeEditor(props: Props) {
           html={contentHtml}
           editing={editing}
           className={`text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30' : ''} cursor-text`}
-          style={{ lineHeight: 1.7 }}
+          style={{ lineHeight: 1.7, ...typoStyle }}
           onSave={(html) => { onUpdateContent(node.id, { html }); onStopEdit(); }}
         />
       ) : node.type === 'quote' ? (
@@ -477,7 +535,7 @@ export default function CanvasNodeEditor(props: Props) {
           html={contentHtml}
           editing={editing}
           className={`border-l-4 border-[#d4a574] bg-[#f8f5f0] px-3 py-2 text-sm ${editing ? 'outline-none ring-2 ring-green-400 bg-green-50/30' : ''} cursor-text`}
-          style={{ lineHeight: 1.7 }}
+          style={{ lineHeight: 1.7, ...typoStyle }}
           onSave={(html) => { onUpdateContent(node.id, { html }); onStopEdit(); }}
         />
       ) : node.type === 'image' ? (
@@ -722,6 +780,19 @@ function AccordionPreview({ node }: { node: CanvasNode }) {
 /** Preview mode: render content as visitors see it (no editing UI) */
 function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
   const p = node.props || {};
+  // Build typography style for preview mode too
+  const typoStyle: React.CSSProperties = {};
+  if (p.fontFamily) typoStyle.fontFamily = p.fontFamily;
+  if (p.fontSize) typoStyle.fontSize = p.fontSize;
+  if (p.fontWeight) typoStyle.fontWeight = p.fontWeight;
+  if (p.fontStyle) typoStyle.fontStyle = p.fontStyle;
+  if (p.textDecoration) typoStyle.textDecoration = p.textDecoration;
+  if (p.color) typoStyle.color = p.color;
+  if (p.textAlign) typoStyle.textAlign = p.textAlign as React.CSSProperties['textAlign'];
+  if (p.lineHeight) typoStyle.lineHeight = p.lineHeight;
+  if (p.letterSpacing) typoStyle.letterSpacing = p.letterSpacing;
+  if (p.textTransform) typoStyle.textTransform = p.textTransform as any;
+
   const style: React.CSSProperties = {
     width: p.width || '100%',
     height: p.height === 'auto' ? undefined : p.height,
@@ -731,6 +802,7 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
     borderRadius: p.borderRadius ?? 0,
     boxSizing: 'border-box',
     textAlign: 'left',
+    ...typoStyle,
   };
 
   if (node.type === 'row') {
@@ -781,8 +853,8 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
       const isQuote = node.type === 'quote';
       return (
         <div
-          style={{ ...style, borderLeft: isQuote ? '4px solid #d4a574' : undefined, background: isQuote ? '#f8f5f0' : undefined, lineHeight: 1.7 }}
-          className="text-sm text-[#5a5349]"
+          style={{ ...style, borderLeft: isQuote ? '4px solid #d4a574' : undefined, background: isQuote ? '#f8f5f0' : undefined, lineHeight: 1.7, color: p.color || (isQuote ? undefined : '#5a5349') }}
+          className="text-sm"
           dangerouslySetInnerHTML={{ __html: (node.content as any)?.html || '' }}
         />
       );

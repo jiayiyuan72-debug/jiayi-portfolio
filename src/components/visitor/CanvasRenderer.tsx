@@ -31,6 +31,19 @@ function colFlex(p: any) {
 
 function NodeRenderer({ node, isRoot = false }: { node: CanvasNode; isRoot?: boolean }) {
   const p = node.props || {};
+  // Build typography style (cascades to children via CSS)
+  const typoStyle: React.CSSProperties = {};
+  if (p.fontFamily) typoStyle.fontFamily = p.fontFamily;
+  if (p.fontSize) typoStyle.fontSize = p.fontSize;
+  if (p.fontWeight) typoStyle.fontWeight = p.fontWeight;
+  if (p.fontStyle) typoStyle.fontStyle = p.fontStyle;
+  if (p.textDecoration) typoStyle.textDecoration = p.textDecoration;
+  if (p.color) typoStyle.color = p.color;
+  if (p.textAlign) typoStyle.textAlign = p.textAlign as React.CSSProperties['textAlign'];
+  if (p.lineHeight) typoStyle.lineHeight = p.lineHeight;
+  if (p.letterSpacing) typoStyle.letterSpacing = p.letterSpacing;
+  if (p.textTransform) typoStyle.textTransform = p.textTransform as any;
+
   const style: React.CSSProperties = {
     width: isRoot ? '100%' : (p.width || '100%'),
     height: p.height === 'auto' ? undefined : p.height,
@@ -43,6 +56,7 @@ function NodeRenderer({ node, isRoot = false }: { node: CanvasNode; isRoot?: boo
     borderRadius: p.borderRadius ?? 0,
     textAlign: 'left',
     boxSizing: 'border-box',
+    ...typoStyle,
   };
   if (node.type === 'row') {
     const stack = p.responsiveStack !== false;
@@ -96,10 +110,11 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
     case 'text':
     case 'quote': {
       const isQuote = node.type === 'quote';
+      const pp = node.props || {};
       return (
         <div
-          style={{ ...style, borderLeft: isQuote ? '4px solid #d4a574' : undefined, background: isQuote ? '#f8f5f0' : undefined, padding: isQuote ? undefined : pad(node.props), lineHeight: 1.7 }}
-          className="text-sm text-[#5a5349]"
+          style={{ ...style, borderLeft: isQuote ? '4px solid #d4a574' : undefined, background: isQuote ? '#f8f5f0' : undefined, padding: isQuote ? undefined : pad(pp), lineHeight: pp.lineHeight ? undefined : 1.7, color: pp.color || (isQuote ? undefined : '#5a5349') }}
+          className="text-sm"
           dangerouslySetInnerHTML={{ __html: (node.content as any)?.html || '' }}
         />
       );

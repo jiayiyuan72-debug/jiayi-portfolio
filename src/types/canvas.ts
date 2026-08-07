@@ -29,6 +29,17 @@ export interface CanvasProps {
   flexBasis?: string;    // column 宽度比例: '1' | '2' | '0.5' | 'auto'
   responsiveStack?: boolean; // row 在移动端自动堆叠为垂直
   alignItems?: 'start' | 'center' | 'end' | 'stretch'; // row 交叉轴对齐
+  // 排版/字体（支持所有元素，容器设置会自动继承到子元素）
+  fontFamily?: string;      // 'system-ui' | 'Georgia, serif' ...
+  fontSize?: string;        // '14px' | '1.2rem' ...
+  fontWeight?: string;      // '300' | '400' | '500' | '600' | '700' | '900'
+  fontStyle?: string;       // 'normal' | 'italic'
+  textDecoration?: string;  // 'none' | 'underline' | 'line-through'
+  color?: string;           // 文字颜色
+  textAlign?: string;       // 'left' | 'center' | 'right' | 'justify'
+  lineHeight?: string;      // '1.5' | '2' ...
+  letterSpacing?: string;   // '0.05em' | '1px' ...
+  textTransform?: string;   // 'none' | 'uppercase' | 'lowercase' | 'capitalize'
 }
 
 export interface CanvasNode {

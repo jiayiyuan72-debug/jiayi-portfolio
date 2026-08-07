@@ -97,6 +97,135 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
           </Field>
         </Section>
 
+        {/* Typography */}
+        <Section title="排版">
+          {/* Quick presets */}
+          <Field label="快速样式">
+            <div className="flex flex-wrap gap-1">
+              <button type="button" onClick={() => set({ fontSize: '32px', fontWeight: '700', lineHeight: '1.3', color: '#2d2a24' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors" style={{ fontWeight: 700 }}>大标题</button>
+              <button type="button" onClick={() => set({ fontSize: '24px', fontWeight: '600', lineHeight: '1.4', color: '#2d2a24' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors" style={{ fontWeight: 600 }}>中标题</button>
+              <button type="button" onClick={() => set({ fontSize: '18px', fontWeight: '600', lineHeight: '1.5', color: '#2d2a24' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors" style={{ fontWeight: 600 }}>小标题</button>
+              <button type="button" onClick={() => set({ fontSize: '16px', fontWeight: '400', lineHeight: '1.7', color: '#5a5349' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">正文</button>
+              <button type="button" onClick={() => set({ fontSize: '13px', fontWeight: '400', lineHeight: '1.5', color: '#8b8b8b' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">说明</button>
+              <button type="button" onClick={() => set({ fontSize: '14px', fontWeight: '500', lineHeight: '1.6', color: '#d4a574' })} className="px-1.5 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors" style={{ color: '#d4a574' }}>强调</button>
+            </div>
+          </Field>
+
+          {/* Font family */}
+          <Field label="字体">
+            <select value={p.fontFamily || ''} onChange={(e) => set({ fontFamily: e.target.value })} className={inputCls}>
+              <option value="">系统默认</option>
+              <option value="system-ui, -apple-system, 'Segoe UI', sans-serif">无衬线 (系统)</option>
+              <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica</option>
+              <option value="'Arial', sans-serif">Arial</option>
+              <option value="'Georgia', 'Times New Roman', serif">Georgia 衬线</option>
+              <option value="'Noto Serif SC', 'Songti SC', 'STSong', serif">宋体衬线</option>
+              <option value="'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">思源黑体</option>
+              <option value="'Inter', system-ui, sans-serif">Inter</option>
+              <option value="'Poppins', system-ui, sans-serif">Poppins</option>
+              <option value="'Playfair Display', Georgia, serif">Playfair Display</option>
+              <option value="'Lora', Georgia, serif">Lora</option>
+              <option value="'JetBrains Mono', 'Courier New', monospace">等宽 Monospace</option>
+            </select>
+          </Field>
+
+          {/* Font size */}
+          <Field label="字号">
+            <div className="flex gap-1">
+              <input value={p.fontSize || ''} onChange={(e) => set({ fontSize: e.target.value })} className={inputCls} placeholder="如 16px" style={{ flex: 1 }} />
+            </div>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {['12px','13px','14px','16px','18px','20px','24px','28px','32px','40px','48px'].map(s => (
+              <button key={s} type="button" onClick={() => set({ fontSize: s })} className="px-1 py-0.5 text-[10px] bg-[#f8f5f0] hover:bg-[#d4a574] hover:text-white border border-[#e8e4de] rounded transition-colors">{s}</button>
+              ))}
+            </div>
+          </Field>
+
+          {/* Font weight */}
+          <Field label="字重">
+            <select value={p.fontWeight || ''} onChange={(e) => set({ fontWeight: e.target.value })} className={inputCls}>
+              <option value="">默认 (400)</option>
+              <option value="300">细体 Light (300)</option>
+              <option value="400">常规 Regular (400)</option>
+              <option value="500">中等 Medium (500)</option>
+              <option value="600">半粗 SemiBold (600)</option>
+              <option value="700">粗体 Bold (700)</option>
+              <option value="900">特粗 Black (900)</option>
+            </select>
+          </Field>
+
+          {/* Text color */}
+          <Field label="文字颜色">
+            <div className="flex items-center gap-2">
+              <input type="color" value={p.color || '#2d2a24'} onChange={(e) => set({ color: e.target.value })} className="w-8 h-8 rounded border border-[#e8e4de] cursor-pointer flex-shrink-0" />
+              <input value={p.color || ''} onChange={(e) => set({ color: e.target.value })} className={inputCls} placeholder="#2d2a24" />
+            </div>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {['#2d2a24','#5a5349','#8b8b8b','#d4a574','#4a90e2','#e85d5d','#52c41a','#722ed1','#fa8c16','#ffffff'].map(c => (
+              <button key={c} type="button" onClick={() => set({ color: c })} className="w-5 h-5 rounded border border-[#e8e4de] hover:scale-110 transition-transform" style={{ background: c }} title={c} />
+              ))}
+            </div>
+          </Field>
+
+          {/* Text alignment */}
+          <Field label="对齐方式">
+            <div className="flex gap-1">
+              <button type="button" onClick={() => set({ textAlign: 'left' })} className={`flex-1 px-1 py-1 text-[10px] border rounded transition-colors ${p.textAlign === 'left' || !p.textAlign ? 'bg-[#d4a574] text-white border-[#d4a574]' : 'bg-[#f8f5f0] hover:bg-[#e8e4de] border-[#e8e4de]'}`}>左</button>
+              <button type="button" onClick={() => set({ textAlign: 'center' })} className={`flex-1 px-1 py-1 text-[10px] border rounded transition-colors ${p.textAlign === 'center' ? 'bg-[#d4a574] text-white border-[#d4a574]' : 'bg-[#f8f5f0] hover:bg-[#e8e4de] border-[#e8e4de]'}`}>居中</button>
+              <button type="button" onClick={() => set({ textAlign: 'right' })} className={`flex-1 px-1 py-1 text-[10px] border rounded transition-colors ${p.textAlign === 'right' ? 'bg-[#d4a574] text-white border-[#d4a574]' : 'bg-[#f8f5f0] hover:bg-[#e8e4de] border-[#e8e4de]'}`}>右</button>
+              <button type="button" onClick={() => set({ textAlign: 'justify' })} className={`flex-1 px-1 py-1 text-[10px] border rounded transition-colors ${p.textAlign === 'justify' ? 'bg-[#d4a574] text-white border-[#d4a574]' : 'bg-[#f8f5f0] hover:bg-[#e8e4de] border-[#e8e4de]'}`}>两端</button>
+            </div>
+          </Field>
+
+          {/* Line height */}
+          <Field label="行高">
+            <select value={p.lineHeight || ''} onChange={(e) => set({ lineHeight: e.target.value })} className={inputCls}>
+              <option value="">默认 (1.7)</option>
+              <option value="1.2">紧凑 (1.2)</option>
+              <option value="1.4">较紧 (1.4)</option>
+              <option value="1.5">适中 (1.5)</option>
+              <option value="1.7">舒适 (1.7)</option>
+              <option value="2.0">宽松 (2.0)</option>
+              <option value="2.5">很宽 (2.5)</option>
+            </select>
+          </Field>
+
+          {/* Letter spacing */}
+          <Field label="字间距">
+            <select value={p.letterSpacing || ''} onChange={(e) => set({ letterSpacing: e.target.value })} className={inputCls}>
+              <option value="">默认</option>
+              <option value="-0.02em">紧凑 (-0.02em)</option>
+              <option value="0.02em">稍紧 (0.02em)</option>
+              <option value="0.05em">稍松 (0.05em)</option>
+              <option value="0.1em">宽松 (0.1em)</option>
+              <option value="0.15em">很宽 (0.15em)</option>
+              <option value="0.2em">超宽 (0.2em)</option>
+            </select>
+          </Field>
+
+          {/* Text transform */}
+          <Field label="大小写转换">
+            <select value={p.textTransform || ''} onChange={(e) => set({ textTransform: e.target.value })} className={inputCls}>
+              <option value="">默认</option>
+              <option value="uppercase">全大写</option>
+              <option value="lowercase">全小写</option>
+              <option value="capitalize">首字母大写</option>
+            </select>
+          </Field>
+
+          {/* Style toggles */}
+          <Field label="文字样式">
+            <div className="flex gap-1">
+              <button type="button" onClick={() => set({ fontStyle: p.fontStyle === 'italic' ? '' : 'italic' })} className={`flex-1 px-1 py-1 text-[10px] italic border rounded transition-colors ${p.fontStyle === 'italic' ? 'bg-[#d4a574] text-white border-[#d4a574]' : 'bg-[#f8f5f0] hover:bg-[#e8e4de] border-[#e8e4de]'}`}>斜体 I</button>
+              <button type="button" onClick={() => set({ textDecoration: p.textDecoration === 'underline' ? '' : 'underline' })} className={`flex-1 px-1 py-1 text-[10px] underline border rounded transition-colors ${p.textDecoration === 'underline' ? 'bg-[#d4a574] text-white border-[#d4a574]' : 'bg-[#f8f5f0] hover:bg-[#e8e4de] border-[#e8e4de]'}`}>下划线 U</button>
+              <button type="button" onClick={() => set({ textDecoration: p.textDecoration === 'line-through' ? '' : 'line-through' })} className={`flex-1 px-1 py-1 text-[10px] line-through border rounded transition-colors ${p.textDecoration === 'line-through' ? 'bg-[#d4a574] text-white border-[#d4a574]' : 'bg-[#f8f5f0] hover:bg-[#e8e4de] border-[#e8e4de]'}`}>删除线 S</button>
+            </div>
+          </Field>
+
+          {/* Clear typography */}
+          <button type="button" onClick={() => set({ fontFamily: '', fontSize: '', fontWeight: '', fontStyle: '', textDecoration: '', color: '', textAlign: '', lineHeight: '', letterSpacing: '', textTransform: '' })} className="w-full py-1 text-[10px] text-[#b8b4ae] hover:text-red-500 border border-[#e8e4de] rounded transition-colors">清除所有排版样式</button>
+        </Section>
+
         {/* Type-specific properties */}
         {node.type === 'section' && (
           <Section title="区块设置">
