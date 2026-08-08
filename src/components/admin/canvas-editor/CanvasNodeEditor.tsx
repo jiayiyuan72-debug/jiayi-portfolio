@@ -66,9 +66,10 @@ export default function CanvasNodeEditor(props: Props) {
   if (p.letterSpacing) typoStyle.letterSpacing = p.letterSpacing;
   if (p.textTransform) typoStyle.textTransform = p.textTransform as any;
 
+  const isMemoryCard = node.type === 'memory-card';
   const boxStyle: React.CSSProperties = {
     width: p.width || '100%',
-    height: p.height === 'auto' ? undefined : p.height,
+    height: isMemoryCard ? '100%' : (p.height === 'auto' ? undefined : p.height),
     marginTop: p.marginTop ?? 0, marginRight: p.marginRight ?? 0, marginBottom: p.marginBottom ?? 12, marginLeft: p.marginLeft ?? 0,
     padding: p.paddingTop != null ? `${p.paddingTop}px ${p.paddingRight ?? 0}px ${p.paddingBottom ?? 0}px ${p.paddingLeft ?? 0}px` : undefined,
     background: p.bgColor || (node.type === 'section' ? '#faf9f6' : node.type === 'card' ? '#ffffff' : 'transparent'),
@@ -407,7 +408,7 @@ export default function CanvasNodeEditor(props: Props) {
           const basis = c.props?.flexBasis || '1';
           const flexVal = basis === 'auto' ? '0 0 auto' : `${basis} 1 0`;
           return (
-            <div key={c.id} style={{ flex: flexVal, minWidth: 0 }} className="relative">
+            <div key={c.id} style={{ flex: flexVal, minWidth: 0, display: 'flex', flexDirection: 'column' }} className="relative">
               <CanvasNodeEditor {...childProps(c, { flexParentId: c.id, flexParentBasis: basis })} />
               {/* Column resize bar - between this column and the next */}
               {i < node.children.length - 1 && !preview && (
@@ -515,7 +516,7 @@ export default function CanvasNodeEditor(props: Props) {
   const leafStyle: React.CSSProperties = {
     ...boxStyle,
     position: 'relative',
-    minHeight: node.type === 'spacer' ? undefined : 24,
+    minHeight: node.type === 'spacer' ? undefined : (isMemoryCard ? (p.height && p.height !== 'auto' ? p.height : 200) : 24),
     cursor: isEditable || isImage ? 'text' : 'default',
     overflow: 'visible',
     isolation: editing ? 'isolate' : undefined,
@@ -883,6 +884,7 @@ function MemoryCardPreview({ node, onEditMemoryCard }: { node: CanvasNode; onEdi
 /** Preview mode: render content as visitors see it (no editing UI) */
 function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
   const p = node.props || {};
+  const isMemoryCard = node.type === 'memory-card';
   // Build typography style for preview mode too
   const typoStyle: React.CSSProperties = {};
   if (p.fontFamily) typoStyle.fontFamily = p.fontFamily;
@@ -898,7 +900,7 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
 
   const style: React.CSSProperties = {
     width: p.width || '100%',
-    height: p.height === 'auto' ? undefined : p.height,
+    height: isMemoryCard ? '100%' : (p.height === 'auto' ? undefined : p.height),
     marginTop: p.marginTop ?? 0, marginRight: p.marginRight ?? 0, marginBottom: p.marginBottom ?? 12, marginLeft: p.marginLeft ?? 0,
     padding: p.paddingTop != null ? `${p.paddingTop}px ${p.paddingRight ?? 0}px ${p.paddingBottom ?? 0}px ${p.paddingLeft ?? 0}px` : undefined,
     background: p.bgColor || (node.type === 'section' ? '#faf9f6' : node.type === 'card' ? '#ffffff' : 'transparent'),
@@ -915,7 +917,7 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
           const cb = c.props?.flexBasis || '1';
           const cf = cb === 'auto' ? '0 0 auto' : `${cb} 1 0`;
           return (
-            <div key={c.id} style={{ flex: cf, minWidth: 0, maxWidth: '100%' }}>
+            <div key={c.id} style={{ flex: cf, minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' }}>
               <PreviewNode node={c} depth={depth + 1} />
             </div>
           );
@@ -1095,6 +1097,28 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
               </div>
             </details>
           ))}
+        </div>
+      );
+    }
+    case 'memory-card': {
+      const c = node.content as any;
+      const coverImage = c?.coverImage || '';
+      return (
+        <div style={{ ...style, height: '100%', minHeight: (p.height && p.height !== 'auto') ? p.height : 200, overflow: 'hidden', borderRadius: p.borderRadius || 12, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0ede5' }}>
+            {coverImage ? (
+              <img src={coverImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: 40, opacity: 0.4 }}>{c?.icon || '🎴'}</span>
+            )}
+          </div>
+          <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, background: 'rgba(255,255,255,0.85)' }}>
+            <span style={{ fontSize: 16 }}>{c?.icon || '🎴'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#2d2a24', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c?.title || '记忆卡片'}</div>
+              <div style={{ fontSize: 11, color: '#8b8b8b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c?.subtitle || '点击查看详细内容'}</div>
+            </div>
+          </div>
         </div>
       );
     }

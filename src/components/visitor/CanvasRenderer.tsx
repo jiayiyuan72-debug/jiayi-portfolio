@@ -71,7 +71,7 @@ function NodeRenderer({ node, isRoot = false }: { node: CanvasNode; isRoot?: boo
         alignItems: p.alignItems || 'stretch',
       }}>
         {node.children.map(c => (
-          <div key={c.id} style={{ flex: colFlex(c.props), minWidth: stack ? 120 : 0, maxWidth: '100%' }}>
+          <div key={c.id} style={{ flex: colFlex(c.props), minWidth: stack ? 120 : 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' }}>
             <NodeRenderer node={c} />
           </div>
         ))}
@@ -283,7 +283,7 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
       const p = node.props || {};
       const c = node.content as any;
       return (
-        <div style={style}>
+        <div style={{ ...style, height: '100%', minHeight: (p.height && p.height !== 'auto') ? p.height : 200 }}>
           <MemoryCardClient
             title={c?.title || '记忆卡片'}
             subtitle={c?.subtitle || '点击查看详细内容'}
