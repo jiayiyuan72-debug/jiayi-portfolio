@@ -78,7 +78,7 @@ export default function CanvasNodeEditor(props: Props) {
     boxSizing: 'border-box',
     textAlign: 'left',
     position: 'relative',
-    ...(isMemoryCard ? { flex: inFlexRow ? 1 : undefined, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' } : {}),
+    ...(isMemoryCard ? { flex: inFlexRow ? 1 : undefined, display: 'flex', flexDirection: 'column' as const } : {}),
     ...typoStyle,
   };
 
@@ -520,7 +520,7 @@ export default function CanvasNodeEditor(props: Props) {
     position: 'relative',
     minHeight: node.type === 'spacer' ? undefined : (isMemoryCard ? (p.height && p.height !== 'auto' ? p.height : 200) : 24),
     cursor: isEditable || isImage ? 'text' : 'default',
-    overflow: isMemoryCard ? 'hidden' : 'visible',
+    overflow: 'visible',
     isolation: editing ? 'isolate' : undefined,
   };
 
@@ -909,7 +909,7 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
     borderRadius: p.borderRadius ?? 0,
     boxSizing: 'border-box',
     textAlign: 'left',
-    ...(isMemoryCard ? { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' } : {}),
+    ...(isMemoryCard ? { flex: 1, display: 'flex', flexDirection: 'column' as const } : {}),
     ...typoStyle,
   };
 
@@ -1107,7 +1107,7 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
       const c = node.content as any;
       const coverImage = c?.coverImage || '';
       return (
-        <div style={{ ...style, flex: 1, minHeight: (p.height && p.height !== 'auto') ? p.height : 200, overflow: 'hidden', borderRadius: p.borderRadius || 12, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...style, flex: 1, minHeight: (p.height && p.height !== 'auto') ? p.height : 200, borderRadius: p.borderRadius || 12, display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0ede5' }}>
             {coverImage ? (
               <img src={coverImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
