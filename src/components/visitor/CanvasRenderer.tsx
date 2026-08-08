@@ -1,5 +1,6 @@
 import { CanvasNode } from '@/types/canvas';
 import PhotoWallClient from './PhotoWallClient';
+import MemoryCardClient from './MemoryCardClient';
 
 interface Props {
   nodes: CanvasNode[];
@@ -275,6 +276,22 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
       return (
         <div style={style}>
           <PhotoWallClient images={imgs} columns={cols} gap={gap} borderRadius={node.props?.borderRadius || 8} />
+        </div>
+      );
+    }
+    case 'memory-card': {
+      const p = node.props || {};
+      const c = node.content as any;
+      return (
+        <div style={style}>
+          <MemoryCardClient
+            title={c?.title || '记忆卡片'}
+            subtitle={c?.subtitle || '点击查看详细内容'}
+            icon={c?.icon || '\U0001F3B4'}
+            canvasData={c?.canvasData || []}
+            bgColor={p.bgColor || '#f8f5f0'}
+            borderRadius={p.borderRadius || 12}
+          />
         </div>
       );
     }

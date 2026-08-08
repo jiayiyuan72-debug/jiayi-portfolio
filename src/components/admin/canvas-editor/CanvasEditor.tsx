@@ -7,6 +7,7 @@ import { Section } from '@/types/section';
 import ComponentPalette from './ComponentPalette';
 import CanvasNodeEditor from './CanvasNodeEditor';
 import PropertyPanel from './PropertyPanel';
+import MemoryCardEditor from './MemoryCardEditor';
 
 interface Props {
   trees: CanvasNode[];
@@ -170,6 +171,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
   const [uploadTarget, setUploadTarget] = useState<string | null>(null);
   const [multiUploadTarget, setMultiUploadTarget] = useState<string | null>(null);
   const [multiUploadProgress, setMultiUploadProgress] = useState<string | null>(null);
+  const [memoryCardEditing, setMemoryCardEditing] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [canvasSaving, setCanvasSaving] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -517,6 +519,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     onPickImage: pickImage,
     onPickGallery: pickImage,
     onPickPhotoWall: pickMultiImage,
+    onEditMemoryCard: (id: string) => setMemoryCardEditing(id),
     onResize: onResizeNode,
     onDropOnNode: onDropOnNode,
     onMoveNode: onMoveNode,
@@ -638,6 +641,21 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
         )}
       </div>
 
+{memoryCardEditing && (() => {
+        const node = findNode(trees, memoryCardEditing);
+        if (!node) { setMemoryCardEditing(null); return null; }
+        return (
+          <MemoryCardEditor
+            title={(node.content as any)?.title || '记忆卡片'}
+            icon={(node.content as any)?.icon || '\U0001F3B4'}
+            canvasData={(node.content as any)?.canvasData || []}
+            onChange={(data) => {
+              updateContent(memoryCardEditing, { canvasData: data });
+            }}
+            onClose={() => setMemoryCardEditing(null)}
+          />
+        );
+      })()}
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
       <input ref={multiFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleMultiFileChange} />
       {multiUploadProgress && (

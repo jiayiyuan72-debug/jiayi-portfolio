@@ -17,6 +17,7 @@ interface NodeCallbacks {
   onPickImage: (id: string) => void;
   onPickGallery: (id: string) => void;
   onPickPhotoWall: (id: string) => void;
+  onEditMemoryCard: (id: string) => void;
   onResize: (id: string, patch: { width?: string; height?: string; flexBasis?: string }) => void;
   onAddChild: (parentId: string, type: CanvasType) => void;
   onQuickAddImage: (parentId: string) => void;
@@ -39,7 +40,7 @@ const EDITABLE_TYPES = ['text', 'quote'];
 
 /** Single canvas node: recursive render with proper child selection */
 export default function CanvasNodeEditor(props: Props) {
-  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onPickPhotoWall, onResize, onAddChild, onQuickAddImage, onDropOnNode, onMoveNode, onInsertBefore, flexParentId, flexParentBasis } = props;
+  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onPickPhotoWall, onEditMemoryCard, onResize, onAddChild, onQuickAddImage, onDropOnNode, onMoveNode, onInsertBefore, flexParentId, flexParentBasis } = props;
 
   const p = node.props || {};
   const isEditable = EDITABLE_TYPES.includes(node.type);
@@ -375,6 +376,7 @@ export default function CanvasNodeEditor(props: Props) {
     onPickImage,
     onPickGallery,
     onPickPhotoWall,
+    onEditMemoryCard,
     onResize,
     onAddChild,
     onQuickAddImage,
@@ -576,6 +578,8 @@ export default function CanvasNodeEditor(props: Props) {
         <AccordionPreview node={node} />
       ) : node.type === 'photo-wall' ? (
         <PhotoWallPreview node={node} onPickPhotoWall={onPickPhotoWall} />
+      ) : node.type === 'memory-card' ? (
+        <MemoryCardPreview node={node} onEditMemoryCard={onEditMemoryCard} />
       ) : node.type === 'divider' ? (
         <hr style={{ border: 'none', borderTop: `${p.lineWidth ?? 1}px solid ${p.lineColor || '#e8e6e0'}` }} />
       ) : node.type === 'spacer' ? (
@@ -831,6 +835,38 @@ function PhotoWallPreview({ node, onPickPhotoWall }: { node: CanvasNode; onPickP
         ))}
       </div>
       <div className="text-[10px] text-[#b8b4ae] text-center mt-2">{imgs.length} 张照片 | 点击属性面板上传更多</div>
+    </div>
+  );
+}
+
+/** Memory card editor preview */
+function MemoryCardPreview({ node, onEditMemoryCard }: { node: CanvasNode; onEditMemoryCard: (id: string) => void }) {
+  const c = node.content as any;
+  const p = node.props || {};
+  const dataCount = (c?.canvasData || []).length;
+  return (
+    <div
+      style={{
+        background: p.bgColor || '#f8f5f0',
+        borderRadius: p.borderRadius || 12,
+        padding: '20px',
+        textAlign: 'center',
+        cursor: 'pointer',
+        minHeight: 80,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+      }}
+      onClick={(e) => { e.stopPropagation(); onEditMemoryCard(node.id); }}
+    >
+      <div style={{ fontSize: 28, marginBottom: 6 }}>{c?.icon || '\U0001F3B4'}</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: '#2d2a24', marginBottom: 2 }}>{c?.title || '记忆卡片'}</div>
+      <div style={{ fontSize: 12, color: '#8b8b8b', marginBottom: 8 }}>{c?.subtitle || '点击查看详细内容'}</div>
+      <div style={{ fontSize: 11, color: '#d4a574', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+        {'\U0000270F'} 编辑详情 ({dataCount} 个组件)
+      </div>
     </div>
   );
 }

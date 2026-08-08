@@ -8,7 +8,7 @@ interface Props {
 }
 
 const LAYOUT: CanvasType[] = ['section', 'row', 'column', 'card'];
-const CONTENT: CanvasType[] = ['text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall'];
+const CONTENT: CanvasType[] = ['text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall', 'memory-card'];
 const TEMPLATES: TemplateId[] = ['image-text', 'text-image', 'two-cards', 'three-cards', 'hero-banner', 'gallery-grid', 'feature-list', 'quote-section'];
 
 /** 左侧组件库：点击或拖拽添加到画板 */

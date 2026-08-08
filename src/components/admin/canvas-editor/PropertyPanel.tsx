@@ -370,6 +370,23 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
           </Section>
         )}
 
+        {node.type === 'memory-card' && (
+          <Section title="记忆卡片设置">
+            <Field label="卡片标题">
+              <input value={(node.content as any)?.title || ''} onChange={(e) => onContentChange({ ...(node.content || {}), title: e.target.value })} className={inputCls} placeholder="卡片标题" />
+            </Field>
+            <Field label="副标题">
+              <input value={(node.content as any)?.subtitle || ''} onChange={(e) => onContentChange({ ...(node.content || {}), subtitle: e.target.value })} className={inputCls} placeholder="点击查看详细内容" />
+            </Field>
+            <Field label="图标">
+              <input value={(node.content as any)?.icon || ''} onChange={(e) => onContentChange({ ...(node.content || {}), icon: e.target.value })} className={inputCls} placeholder="emoji" style={{ textAlign: 'center' }} />
+            </Field>
+            <Field label="提示">
+              <p className="text-[10px] text-[#b8b4ae]">在画布上点击卡片可编辑详细内容</p>
+            </Field>
+          </Section>
+        )}
+
         {node.type === 'timeline' && (
           <Section title="时间轴设置">
             <Field label="时间轴项">

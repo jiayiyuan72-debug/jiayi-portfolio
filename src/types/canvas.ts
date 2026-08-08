@@ -4,7 +4,7 @@
 export type CanvasType =
   | 'section' | 'row' | 'column' | 'card'
   | 'text' | 'image' | 'quote' | 'divider' | 'spacer' | 'gallery'
-  | 'timeline' | 'skill-bar' | 'stats' | 'tags' | 'video' | 'accordion' | 'photo-wall';
+  | 'timeline' | 'skill-bar' | 'stats' | 'tags' | 'video' | 'accordion' | 'photo-wall' | 'memory-card';
 
 export interface CanvasProps {
   width?: string;        // '100%' | '320px' ...
@@ -69,6 +69,7 @@ export const CANVAS_TYPE_LABELS: Record<CanvasType, { label: string; icon: strin
   video: { label: '视频', icon: '🎬' },
   accordion: { label: '折叠面板', icon: '📁' },
   'photo-wall': { label: '照片墙', icon: '🖼️' },
+  'memory-card': { label: '记忆卡片', icon: '🎴' },
 };
 
 // 布局容器（可含子）
@@ -76,10 +77,10 @@ export const LAYOUT_TYPES: CanvasType[] = ['section', 'row', 'column', 'card'];
 
 // 嵌套规则（section 六）：每种容器可以作为子放入哪些类型
 export const CAN_NEST_IN: Record<CanvasType, CanvasType[]> = {
-  section: ['row', 'column', 'card', 'text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall'],
+  section: ['row', 'column', 'card', 'text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall', 'memory-card'],
   row: ['column'],
-  column: ['card', 'text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall'],
-  card: ['text', 'image', 'quote', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall'],
+  column: ['card', 'text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall', 'memory-card'],
+  card: ['text', 'image', 'quote', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall', 'memory-card'],
   text: [],
   image: [],
   quote: [],
@@ -93,6 +94,7 @@ export const CAN_NEST_IN: Record<CanvasType, CanvasType[]> = {
   video: [],
   accordion: [],
   'photo-wall': [],
+  'memory-card': [],
 };
 
 export const MAX_DEPTH = 3;
@@ -152,6 +154,8 @@ export function defaultCanvasNode(type: CanvasType): CanvasNode {
       ] }, children: [] };
     case 'photo-wall':
       return { id, type, props: { ...baseProps, borderRadius: 8 }, content: { images: [], columns: 3, gap: 8 }, children: [] };
+    case 'memory-card':
+      return { id, type, props: { ...baseProps, height: '160px', bgColor: '#f8f5f0', borderRadius: 12, paddingTop: 20, paddingRight: 20, paddingBottom: 20, paddingLeft: 20 }, content: { title: '记忆卡片', subtitle: '点击查看详细内容', icon: '🎴', canvasData: [] }, children: [] };
   }
 }
 
