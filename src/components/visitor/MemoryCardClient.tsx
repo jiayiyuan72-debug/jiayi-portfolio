@@ -8,47 +8,13 @@ interface Props {
   title: string;
   subtitle: string;
   icon: string;
+  coverImage?: string;
   canvasData: CanvasNode[];
   bgColor?: string;
   borderRadius?: number;
 }
 
-/** Extract preview content from canvas nodes */
-function extractPreview(nodes: CanvasNode[]) {
-  const textSnippets: string[] = [];
-  const imageUrls: string[] = [];
-
-  for (const node of nodes) {
-    const c = node.content as any;
-    if (node.type === 'text' || node.type === 'quote') {
-      const text = (c?.html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
-      if (text) textSnippets.push(text);
-    } else if (node.type === 'image') {
-      if (c?.src) imageUrls.push(c.src);
-    } else if (node.type === 'photo-wall' || node.type === 'gallery') {
-      const imgs = c?.images || [];
-      imgs.forEach((img: any) => { if (img.src || img) imageUrls.push(img.src || img); });
-    } else if (node.type === 'timeline') {
-      const items = c?.items || [];
-      items.forEach((item: any) => {
-        if (item.title) textSnippets.push(`${item.date || ''} ${item.title}`);
-        if (item.image) imageUrls.push(item.image);
-      });
-    } else if (node.type === 'stats') {
-      const stats = c?.stats || [];
-      stats.forEach((s: any) => {
-        if (s.label) textSnippets.push(`${s.value || ''}${s.suffix || ''} ${s.label}`);
-      });
-    } else if (node.type === 'tags') {
-      const tags = c?.tags || [];
-      if (tags.length > 0) textSnippets.push(tags.join(' · '));
-    }
-  }
-
-  return { textSnippets, imageUrls };
-}
-
-export default function MemoryCardClient({ title, subtitle, icon, canvasData, bgColor = '#f8f5f0', borderRadius = 12 }: Props) {
+export default function MemoryCardClient({ title, subtitle, icon, coverImage, canvasData, bgColor = '#f8f5f0', borderRadius = 12 }: Props) {
   const [open, setOpen] = useState(false);
 
   const close = useCallback(() => setOpen(false), []);
@@ -62,12 +28,10 @@ export default function MemoryCardClient({ title, subtitle, icon, canvasData, bg
   }, [open, close]);
 
   const hasContent = canvasData && canvasData.length > 0;
-  const { textSnippets, imageUrls } = hasContent ? extractPreview(canvasData) : { textSnippets: [], imageUrls: [] };
-  const hasPreview = textSnippets.length > 0 || imageUrls.length > 0;
 
   return (
     <>
-      {/* Compact card with content preview */}
+      {/* Card with cover image + title */}
       <div
         onClick={() => setOpen(true)}
         style={{
@@ -84,52 +48,26 @@ export default function MemoryCardClient({ title, subtitle, icon, canvasData, bg
         onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
       >
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', borderBottom: hasPreview ? '1px solid #e8e6e0' : 'none', flexShrink: 0 }}>
-          <span style={{ fontSize: 18 }}>{icon}</span>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#2d2a24', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
-        </div>
+        {/* Cover image */}
+        {coverImage ? (
+          <div style={{ width: '100%', aspectRatio: '16/9', overflow: 'hidden', flexShrink: 0 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={coverImage} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+        ) : (
+          <div style={{ width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0ede5', flexShrink: 0 }}>
+            <span style={{ fontSize: 40, opacity: 0.4 }}>{icon}</span>
+          </div>
+        )}
 
-        {/* Content preview area */}
-        <div style={{ flex: 1, padding: hasPreview ? '12px 14px' : '20px 14px', overflow: 'hidden' }}>
-          {hasPreview ? (
-            <>
-              {/* Text preview */}
-              {textSnippets.length > 0 && (
-                <div style={{
-                  fontSize: 13,
-                  color: '#5a5349',
-                  lineHeight: 1.6,
-                  marginBottom: imageUrls.length > 0 ? 10 : 0,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 4,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>
-                  {textSnippets.join('\n')}
-                </div>
-              )}
-              {/* Image preview - show up to 3 thumbnails */}
-              {imageUrls.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(imageUrls.length, 3)}, 1fr)`, gap: 6 }}>
-                  {imageUrls.slice(0, 3).map((url, i) => (
-                    <div key={i} style={{ borderRadius: 6, overflow: 'hidden', aspectRatio: '1/1', background: '#f0ede5' }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <div style={{ textAlign: 'center', color: '#8b8b8b', fontSize: 13, padding: '10px 0' }}>{subtitle}</div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: '6px 14px', fontSize: 11, color: '#d4a574', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, borderTop: hasPreview ? '1px solid #f0ede5' : 'none', flexShrink: 0 }}>
-          点击查看详情 {'\u2192'}
+        {/* Title bar */}
+        <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 16 }}>{icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#2d2a24', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+            <div style={{ fontSize: 11, color: '#8b8b8b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>
+          </div>
+          <span style={{ fontSize: 11, color: '#d4a574', fontWeight: 500, flexShrink: 0 }}>{'\u2192'}</span>
         </div>
       </div>
 
@@ -175,7 +113,7 @@ export default function MemoryCardClient({ title, subtitle, icon, canvasData, bg
             </div>
             {/* Modal content */}
             <div style={{ padding: '24px', maxHeight: 'calc(100vh - 160px)', overflowY: 'auto' }}>
-              {canvasData && canvasData.length > 0 ? (
+              {hasContent ? (
                 <CanvasRenderer nodes={canvasData} />
               ) : (
                 <div style={{ textAlign: 'center', color: '#b8b4ae', padding: '40px 0', fontSize: 14 }}>

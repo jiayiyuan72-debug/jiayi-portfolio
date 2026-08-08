@@ -155,7 +155,7 @@ export function defaultCanvasNode(type: CanvasType): CanvasNode {
     case 'photo-wall':
       return { id, type, props: { ...baseProps, borderRadius: 8 }, content: { images: [], columns: 3, gap: 8 }, children: [] };
     case 'memory-card':
-      return { id, type, props: { ...baseProps, height: '160px', bgColor: '#f8f5f0', borderRadius: 12, paddingTop: 20, paddingRight: 20, paddingBottom: 20, paddingLeft: 20 }, content: { title: '记忆卡片', subtitle: '点击查看详细内容', icon: '🎴', canvasData: [] }, children: [] };
+      return { id, type, props: { ...baseProps, height: '160px', bgColor: '#f8f5f0', borderRadius: 12, paddingTop: 20, paddingRight: 20, paddingBottom: 20, paddingLeft: 20 }, content: { title: '记忆卡片', subtitle: '点击查看详细内容', icon: '🎴', coverImage: '', canvasData: [] }, children: [] };
   }
 }
 

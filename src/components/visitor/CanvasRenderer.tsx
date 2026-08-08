@@ -288,6 +288,7 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
             title={c?.title || '记忆卡片'}
             subtitle={c?.subtitle || '点击查看详细内容'}
             icon={c?.icon || '\U0001F3B4'}
+            coverImage={c?.coverImage || ''}
             canvasData={c?.canvasData || []}
             bgColor={p.bgColor || '#f8f5f0'}
             borderRadius={p.borderRadius || 12}

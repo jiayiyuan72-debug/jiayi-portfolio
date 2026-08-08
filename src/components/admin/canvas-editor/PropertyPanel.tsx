@@ -2,6 +2,8 @@
 
 import { CanvasNode, CANVAS_TYPE_LABELS } from '@/types/canvas';
 import type { Section } from '@/types/section';
+import { useState, useRef } from 'react';
+import toast from 'react-hot-toast';
 
 interface Props {
   node: CanvasNode | null;
@@ -372,6 +374,12 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
 
         {node.type === 'memory-card' && (
           <Section title="记忆卡片设置">
+            <Field label="封面图片">
+              <CoverImageField
+                value={(node.content as any)?.coverImage || ''}
+                onChange={(url) => onContentChange({ ...(node.content || {}), coverImage: url })}
+              />
+            </Field>
             <Field label="卡片标题">
               <input value={(node.content as any)?.title || ''} onChange={(e) => onContentChange({ ...(node.content || {}), title: e.target.value })} className={inputCls} placeholder="卡片标题" />
             </Field>
@@ -382,7 +390,7 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
               <input value={(node.content as any)?.icon || ''} onChange={(e) => onContentChange({ ...(node.content || {}), icon: e.target.value })} className={inputCls} placeholder="emoji" style={{ textAlign: 'center' }} />
             </Field>
             <Field label="提示">
-              <p className="text-[10px] text-[#b8b4ae]">在画布上点击卡片可编辑详细内容</p>
+              <p className="text-[10px] text-[#b8b4ae]">设置封面图片和标题后，点击卡片可编辑详细内容</p>
             </Field>
           </Section>
         )}
@@ -653,4 +661,78 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
       <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
     </button>
   );
+}
+
+
+function CoverImageField({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      let blob: Blob = file;
+      if (file.size > 1.5 * 1024 * 1024) {
+        const b = await compressImage(file);
+        if (b && b.size > 0 && b.size < file.size) blob = b;
+      }
+      const fd = new FormData();
+      fd.append('file', blob, blob === file ? file.name : 'image.jpg');
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '上传失败');
+      onChange(data.url);
+      toast.success('封面上传成功');
+    } catch (err: any) {
+      toast.error(err.message || '上传失败');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  return (
+    <div>
+      {value ? (
+        <div className="relative group">
+          <img src={value} alt="" className="w-full rounded border border-[#e8e4de]" style={{ aspectRatio: '16/9', objectFit: 'cover' }} />
+          <div className="flex gap-1 mt-1">
+            <button onClick={() => fileRef.current?.click()} className="flex-1 text-[10px] py-1 bg-[#f0ede5] text-[#5a5349] rounded border border-[#d4a574] hover:bg-[#e8e4de]">
+              {uploading ? '上传中...' : '更换'}
+            </button>
+            <button onClick={() => onChange('')} className="flex-1 text-[10px] py-1 bg-[#fee] text-[#c00] rounded border border-[#fcc] hover:bg-[#fdd]">
+              删除
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="w-full py-4 text-xs text-[#b8b4ae] bg-[#f5f5f0] rounded border-2 border-dashed border-[#d4a574] hover:bg-[#f0ede5] transition-colors"
+        >
+          {uploading ? '上传中...' : '📷 点击上传封面图片'}
+        </button>
+      )}
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+    </div>
+  );
+}
+
+async function compressImage(file: File): Promise<Blob | null> {
+  try {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; img.src = url; });
+    const MAX = 1920;
+    let w = img.width, h = img.height;
+    if (w > MAX) { h = h * MAX / w; w = MAX; }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0, w, h);
+    return await new Promise<Blob>((res) => canvas.toBlob(b => res(b!), 'image/jpeg', 0.82));
+  } catch { return null; }
 }
