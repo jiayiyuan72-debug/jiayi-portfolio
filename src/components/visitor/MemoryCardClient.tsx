@@ -31,7 +31,7 @@ export default function MemoryCardClient({ title, subtitle, icon, coverImage, ca
 
   return (
     <>
-      {/* Card with cover image + title */}
+      {/* Card with cover image + title - fills container height */}
       <div
         onClick={() => setOpen(true)}
         style={{
@@ -42,26 +42,25 @@ export default function MemoryCardClient({ title, subtitle, icon, coverImage, ca
           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
           position: 'relative',
           height: '100%',
+          minHeight: 60,
           display: 'flex',
           flexDirection: 'column',
         }}
         onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
       >
-        {/* Cover image */}
-        {coverImage ? (
-          <div style={{ width: '100%', aspectRatio: '16/9', overflow: 'hidden', flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* Cover image - fills available space */}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0ede5' }}>
+          {coverImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={coverImage} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </div>
-        ) : (
-          <div style={{ width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0ede5', flexShrink: 0 }}>
+          ) : (
             <span style={{ fontSize: 40, opacity: 0.4 }}>{icon}</span>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Title bar */}
-        <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        {/* Title bar - fixed at bottom */}
+        <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, background: 'rgba(255,255,255,0.85)' }}>
           <span style={{ fontSize: 16 }}>{icon}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#2d2a24', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>

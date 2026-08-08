@@ -75,6 +75,7 @@ export default function CanvasNodeEditor(props: Props) {
     borderRadius: p.borderRadius ?? 0,
     boxSizing: 'border-box',
     textAlign: 'left',
+    position: 'relative',
     ...typoStyle,
   };
 
@@ -853,23 +854,24 @@ function MemoryCardPreview({ node, onEditMemoryCard }: { node: CanvasNode; onEdi
         cursor: 'pointer',
         overflow: 'hidden',
         position: 'relative',
+        height: '100%',
         minHeight: 60,
+        display: 'flex',
+        flexDirection: 'column',
       }}
       onClick={(e) => { e.stopPropagation(); onEditMemoryCard(node.id); }}
     >
-      {/* Cover image */}
-      {coverImage ? (
-        <div style={{ width: '100%', aspectRatio: '16/9', overflow: 'hidden' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* Cover image - fills available space */}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0ede5' }}>
+        {coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={coverImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </div>
-      ) : (
-        <div style={{ width: '100%', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0ede5' }}>
+        ) : (
           <span style={{ fontSize: 32, opacity: 0.4 }}>{c?.icon || '\u{1F3B4}'}</span>
-        </div>
-      )}
-      {/* Title bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px' }}>
+        )}
+      </div>
+      {/* Title bar - fixed height at bottom */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', flexShrink: 0, background: 'rgba(255,255,255,0.85)' }}>
         <span style={{ fontSize: 14 }}>{c?.icon || '\u{1F3B4}'}</span>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#2d2a24', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c?.title || '记忆卡片'}</span>
         <span style={{ fontSize: 10, color: '#d4a574', fontWeight: 500, flexShrink: 0 }}>{'\u270F'} 编辑</span>
