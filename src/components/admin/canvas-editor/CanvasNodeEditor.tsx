@@ -574,6 +574,8 @@ export default function CanvasNodeEditor(props: Props) {
         <VideoPreview node={node} />
       ) : node.type === 'accordion' ? (
         <AccordionPreview node={node} />
+      ) : node.type === 'photo-wall' ? (
+        <PhotoWallPreview node={node} onPickPhotoWall={onPickPhotoWall} />
       ) : node.type === 'divider' ? (
         <hr style={{ border: 'none', borderTop: `${p.lineWidth ?? 1}px solid ${p.lineColor || '#e8e6e0'}` }} />
       ) : node.type === 'spacer' ? (
@@ -798,7 +800,26 @@ function PhotoWallPreview({ node, onPickPhotoWall }: { node: CanvasNode; onPickP
   const cols = c?.columns || 3;
   const gap = c?.gap ?? 8;
   if (imgs.length === 0) {
-    return <div className="text-xs text-[#b8b4ae] py-6 text-center cursor-pointer" onClick={(e) => { e.stopPropagation(); onPickPhotoWall(node.id); }}>点击上传照片（支持多选）</div>;
+    return (
+      <div
+        onClick={(e) => { e.stopPropagation(); onPickPhotoWall(node.id); }}
+        style={{
+          border: '2px dashed #d4a574',
+          borderRadius: 12,
+          padding: '32px 16px',
+          textAlign: 'center',
+          cursor: 'pointer',
+          background: '#faf9f6',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f0e8'; e.currentTarget.style.borderColor = '#4a90e2'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = '#faf9f6'; e.currentTarget.style.borderColor = '#d4a574'; }}
+      >
+        <div style={{ fontSize: 32, marginBottom: 8 }}>{'📷'}</div>
+        <div style={{ fontSize: 14, fontWeight: 500, color: '#2d2a24', marginBottom: 4 }}>点击上传照片</div>
+        <div style={{ fontSize: 12, color: '#8b8b8b' }}>支持多选，瀑布流自动排版</div>
+      </div>
+    );
   }
   return (
     <div>
