@@ -283,7 +283,7 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
       const p = node.props || {};
       const c = node.content as any;
       return (
-        <div style={{ ...style, height: '100%', minHeight: (p.height && p.height !== 'auto') ? p.height : 200 }}>
+        <div style={{ ...style, flex: 1, minHeight: (p.height && p.height !== 'auto') ? p.height : 200, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <MemoryCardClient
             title={c?.title || '记忆卡片'}
             subtitle={c?.subtitle || '点击查看详细内容'}

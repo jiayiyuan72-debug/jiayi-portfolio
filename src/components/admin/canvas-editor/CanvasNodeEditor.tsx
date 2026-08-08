@@ -67,9 +67,10 @@ export default function CanvasNodeEditor(props: Props) {
   if (p.textTransform) typoStyle.textTransform = p.textTransform as any;
 
   const isMemoryCard = node.type === 'memory-card';
+  const inFlexRow = !!flexParentId;
   const boxStyle: React.CSSProperties = {
     width: p.width || '100%',
-    height: isMemoryCard ? '100%' : (p.height === 'auto' ? undefined : p.height),
+    height: isMemoryCard ? (inFlexRow ? undefined : (p.height === 'auto' ? undefined : p.height)) : (p.height === 'auto' ? undefined : p.height),
     marginTop: p.marginTop ?? 0, marginRight: p.marginRight ?? 0, marginBottom: p.marginBottom ?? 12, marginLeft: p.marginLeft ?? 0,
     padding: p.paddingTop != null ? `${p.paddingTop}px ${p.paddingRight ?? 0}px ${p.paddingBottom ?? 0}px ${p.paddingLeft ?? 0}px` : undefined,
     background: p.bgColor || (node.type === 'section' ? '#faf9f6' : node.type === 'card' ? '#ffffff' : 'transparent'),
@@ -77,6 +78,7 @@ export default function CanvasNodeEditor(props: Props) {
     boxSizing: 'border-box',
     textAlign: 'left',
     position: 'relative',
+    ...(isMemoryCard ? { flex: inFlexRow ? 1 : undefined, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' } : {}),
     ...typoStyle,
   };
 
@@ -518,7 +520,7 @@ export default function CanvasNodeEditor(props: Props) {
     position: 'relative',
     minHeight: node.type === 'spacer' ? undefined : (isMemoryCard ? (p.height && p.height !== 'auto' ? p.height : 200) : 24),
     cursor: isEditable || isImage ? 'text' : 'default',
-    overflow: 'visible',
+    overflow: isMemoryCard ? 'hidden' : 'visible',
     isolation: editing ? 'isolate' : undefined,
   };
 
@@ -855,7 +857,7 @@ function MemoryCardPreview({ node, onEditMemoryCard }: { node: CanvasNode; onEdi
         cursor: 'pointer',
         overflow: 'hidden',
         position: 'relative',
-        height: '100%',
+        flex: 1,
         minHeight: 60,
         display: 'flex',
         flexDirection: 'column',
@@ -900,13 +902,14 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
 
   const style: React.CSSProperties = {
     width: p.width || '100%',
-    height: isMemoryCard ? '100%' : (p.height === 'auto' ? undefined : p.height),
+    height: isMemoryCard ? undefined : (p.height === 'auto' ? undefined : p.height),
     marginTop: p.marginTop ?? 0, marginRight: p.marginRight ?? 0, marginBottom: p.marginBottom ?? 12, marginLeft: p.marginLeft ?? 0,
     padding: p.paddingTop != null ? `${p.paddingTop}px ${p.paddingRight ?? 0}px ${p.paddingBottom ?? 0}px ${p.paddingLeft ?? 0}px` : undefined,
     background: p.bgColor || (node.type === 'section' ? '#faf9f6' : node.type === 'card' ? '#ffffff' : 'transparent'),
     borderRadius: p.borderRadius ?? 0,
     boxSizing: 'border-box',
     textAlign: 'left',
+    ...(isMemoryCard ? { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' } : {}),
     ...typoStyle,
   };
 
@@ -1104,7 +1107,7 @@ function PreviewNode({ node, depth }: { node: CanvasNode; depth: number }) {
       const c = node.content as any;
       const coverImage = c?.coverImage || '';
       return (
-        <div style={{ ...style, height: '100%', minHeight: (p.height && p.height !== 'auto') ? p.height : 200, overflow: 'hidden', borderRadius: p.borderRadius || 12, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ ...style, flex: 1, minHeight: (p.height && p.height !== 'auto') ? p.height : 200, overflow: 'hidden', borderRadius: p.borderRadius || 12, display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0ede5' }}>
             {coverImage ? (
               <img src={coverImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

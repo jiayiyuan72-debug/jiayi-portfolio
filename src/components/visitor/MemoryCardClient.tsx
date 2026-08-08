@@ -41,7 +41,7 @@ export default function MemoryCardClient({ title, subtitle, icon, coverImage, ca
           overflow: 'hidden',
           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
           position: 'relative',
-          height: '100%',
+          flex: 1,
           minHeight: 60,
           display: 'flex',
           flexDirection: 'column',
