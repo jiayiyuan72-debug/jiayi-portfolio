@@ -68,7 +68,7 @@ export default function MemoryCardEditor({ title, icon, canvasData, onChange, on
     if (!files.length || !uploadTarget) return;
     const target = uploadTarget;
     try {
-      if (nodes.find(n => n.id === target)?.type === 'photo-wall') {
+      if (nodes.find(n => n.id === target)?.type === 'photo-wall' || nodes.find(n => n.id === target)?.type === 'gallery') {
         const uploaded: { src: string; caption: string }[] = [];
         for (const file of files) {
           let blob: Blob = file;
@@ -254,18 +254,56 @@ function NodeEditor({ node, editing, onEdit, onStartEdit, onUpload, onUpdateCont
   if (node.type === 'photo-wall') {
     const imgs = c?.images || [];
     if (imgs.length === 0) {
-      return <div onClick={(e) => { e.stopPropagation(); onUpload(); }} style={{ padding: '20px', textAlign: 'center', color: '#b8b4ae', fontSize: 13, background: '#f5f5f0', borderRadius: 8, cursor: 'pointer', border: '2px dashed #d4a574' }}>点击上传照片（支持多选）</div>;
+      return (
+        <div onClick={(e) => { e.stopPropagation(); onUpload(); }} style={{ padding: '28px', textAlign: 'center', color: '#b8b4ae', fontSize: 13, background: '#f5f5f0', borderRadius: 8, cursor: 'pointer', border: '2px dashed #d4a574' }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>{'\u{1F4F7}'}</div>
+          点击上传照片（支持多选）
+        </div>
+      );
     }
     return (
       <div>
         <div style={{ columnCount: c?.columns || 3, columnGap: (c?.gap || 8) + 'px' }}>
           {imgs.map((img: any, i: number) => (
-            <div key={i} style={{ breakInside: 'avoid', marginBottom: (c?.gap || 8) + 'px', borderRadius: 8, overflow: 'hidden' }}>
+            <div key={i} style={{ breakInside: 'avoid', marginBottom: (c?.gap || 8) + 'px', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
               <img src={img.src || img} alt="" style={{ width: '100%', display: 'block' }} />
+              <button
+                onClick={(e) => { e.stopPropagation(); onUpdateContent({ images: imgs.filter((_: any, idx: number) => idx !== i) }); }}
+                style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >{'\u2715'}</button>
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 10, color: '#b8b4ae', textAlign: 'center', marginTop: 4 }}>{imgs.length} 张照片</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, flexWrap: 'wrap', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, color: '#b8b4ae' }}>{imgs.length} 张照片</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#8b8b8b' }}>
+              列数:
+              <select
+                value={c?.columns || 3}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => onUpdateContent({ columns: parseInt(e.target.value) })}
+                style={{ fontSize: 10, padding: '1px 4px', border: '1px solid #d4a574', borderRadius: 4, background: '#fff' }}
+              >
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
+                <option value={5}>5</option>
+              </select>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#8b8b8b' }}>
+              间距:
+              <input
+                type="number"
+                value={c?.gap ?? 8}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => onUpdateContent({ gap: parseInt(e.target.value) || 8 })}
+                style={{ fontSize: 10, width: 36, padding: '1px 4px', border: '1px solid #d4a574', borderRadius: 4 }}
+              />
+            </label>
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); onUpload(); }} style={{ fontSize: 11, padding: '4px 12px', background: '#f0ede5', color: '#5a5349', border: '1px solid #d4a574', borderRadius: 6, cursor: 'pointer' }}>+ 添加更多</button>
+        </div>
       </div>
     );
   }
@@ -273,14 +311,47 @@ function NodeEditor({ node, editing, onEdit, onStartEdit, onUpload, onUpdateCont
   if (node.type === 'gallery') {
     const imgs = c?.images || [];
     const cols = c?.columns || 3;
+    if (imgs.length === 0) {
+      return (
+        <div onClick={(e) => { e.stopPropagation(); onUpload(); }} style={{ padding: '28px', textAlign: 'center', color: '#b8b4ae', fontSize: 13, background: '#f5f5f0', borderRadius: 8, cursor: 'pointer', border: '2px dashed #d4a574' }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>{'\u{1F3A8}'}</div>
+          点击上传图片（支持多选）
+        </div>
+      );
+    }
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols},1fr)`, gap: c?.gap ?? 8 }}>
-        {imgs.map((img: any, i: number) => (
-          <div key={i} style={{ background: '#f5f5f0', borderRadius: 4, overflow: 'hidden' }}>
-            <img src={img.src || img} alt="" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover' }} />
+      <div>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols},1fr)`, gap: c?.gap ?? 8 }}>
+          {imgs.map((img: any, i: number) => (
+            <div key={i} style={{ background: '#f5f5f0', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+              <img src={img.src || img} alt="" style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover' }} />
+              <button
+                onClick={(e) => { e.stopPropagation(); onUpdateContent({ images: imgs.filter((_: any, idx: number) => idx !== i) }); }}
+                style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >{'\u2715'}</button>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, flexWrap: 'wrap', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, color: '#b8b4ae' }}>{imgs.length} 张图片</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#8b8b8b' }}>
+              列数:
+              <select
+                value={cols}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => onUpdateContent({ columns: parseInt(e.target.value) })}
+                style={{ fontSize: 10, padding: '1px 4px', border: '1px solid #d4a574', borderRadius: 4, background: '#fff' }}
+              >
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
+                <option value={5}>5</option>
+              </select>
+            </label>
           </div>
-        ))}
-        {imgs.length === 0 && <div style={{ gridColumn: `1/${cols+1}`, padding: 20, textAlign: 'center', color: '#b8b4ae', fontSize: 12 }}>图片组为空</div>}
+          <button onClick={(e) => { e.stopPropagation(); onUpload(); }} style={{ fontSize: 11, padding: '4px 12px', background: '#f0ede5', color: '#5a5349', border: '1px solid #d4a574', borderRadius: 6, cursor: 'pointer' }}>+ 添加更多</button>
+        </div>
       </div>
     );
   }

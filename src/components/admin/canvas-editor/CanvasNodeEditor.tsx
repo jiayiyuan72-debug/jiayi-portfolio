@@ -839,34 +839,86 @@ function PhotoWallPreview({ node, onPickPhotoWall }: { node: CanvasNode; onPickP
   );
 }
 
-/** Memory card editor preview */
+/** Memory card editor preview - shows content preview */
 function MemoryCardPreview({ node, onEditMemoryCard }: { node: CanvasNode; onEditMemoryCard: (id: string) => void }) {
   const c = node.content as any;
   const p = node.props || {};
-  const dataCount = (c?.canvasData || []).length;
+  const canvasData = c?.canvasData || [];
+
+  // Extract preview content
+  const textSnippets: string[] = [];
+  const imageUrls: string[] = [];
+  for (const n of canvasData) {
+    const nc = n.content as any;
+    if (n.type === 'text' || n.type === 'quote') {
+      const text = (nc?.html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+      if (text) textSnippets.push(text);
+    } else if (n.type === 'image') {
+      if (nc?.src) imageUrls.push(nc.src);
+    } else if (n.type === 'photo-wall' || n.type === 'gallery') {
+      const imgs = nc?.images || [];
+      imgs.forEach((img: any) => { if (img.src || img) imageUrls.push(img.src || img); });
+    } else if (n.type === 'timeline') {
+      const items = nc?.items || [];
+      items.forEach((item: any) => {
+        if (item.title) textSnippets.push(`${item.date || ''} ${item.title}`);
+        if (item.image) imageUrls.push(item.image);
+      });
+    } else if (n.type === 'tags') {
+      const tags = nc?.tags || [];
+      if (tags.length > 0) textSnippets.push(tags.join(' · '));
+    }
+  }
+  const hasPreview = textSnippets.length > 0 || imageUrls.length > 0;
+
   return (
     <div
       style={{
         background: p.bgColor || '#f8f5f0',
         borderRadius: p.borderRadius || 12,
-        padding: '20px',
-        textAlign: 'center',
         cursor: 'pointer',
+        overflow: 'hidden',
+        position: 'relative',
         minHeight: 80,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
       }}
       onClick={(e) => { e.stopPropagation(); onEditMemoryCard(node.id); }}
     >
-      <div style={{ fontSize: 28, marginBottom: 6 }}>{c?.icon || '\U0001F3B4'}</div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: '#2d2a24', marginBottom: 2 }}>{c?.title || '记忆卡片'}</div>
-      <div style={{ fontSize: 12, color: '#8b8b8b', marginBottom: 8 }}>{c?.subtitle || '点击查看详细内容'}</div>
-      <div style={{ fontSize: 11, color: '#d4a574', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
-        {'\U0000270F'} 编辑详情 ({dataCount} 个组件)
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: hasPreview ? '1px solid #e8e6e0' : 'none' }}>
+        <span style={{ fontSize: 16 }}>{c?.icon || '\u{1F3B4}'}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#2d2a24', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c?.title || '记忆卡片'}</span>
+        <span style={{ fontSize: 10, color: '#d4a574', fontWeight: 500, flexShrink: 0 }}>{'\u270F'} 编辑</span>
       </div>
+      {/* Content preview */}
+      {hasPreview ? (
+        <div style={{ padding: '10px 12px', overflow: 'hidden' }}>
+          {textSnippets.length > 0 && (
+            <div style={{
+              fontSize: 12, color: '#5a5349', lineHeight: 1.5, marginBottom: imageUrls.length > 0 ? 8 : 0,
+              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+              overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {textSnippets.join('\n')}
+            </div>
+          )}
+          {imageUrls.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(imageUrls.length, 3)}, 1fr)`, gap: 4 }}>
+              {imageUrls.slice(0, 3).map((url, i) => (
+                <div key={i} style={{ borderRadius: 4, overflow: 'hidden', aspectRatio: '1/1', background: '#f0ede5' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ padding: '16px 12px', textAlign: 'center', color: '#8b8b8b', fontSize: 12 }}>
+          {c?.subtitle || '点击编辑详细内容'}
+        </div>
+      )}
     </div>
   );
 }
