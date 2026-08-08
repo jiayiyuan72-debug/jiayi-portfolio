@@ -327,6 +327,49 @@ export default function PropertyPanel({ node, section, onSectionUpdate, onSectio
           </Section>
         )}
 
+        {node.type === 'photo-wall' && (
+          <Section title="照片墙设置">
+            <Field label="列数">
+              <input type="number" value={(node.content as any)?.columns || 3} onChange={(e) => onContentChange({ ...(node.content || {}), columns: Number(e.target.value) })} className={numCls} />
+            </Field>
+            <Field label="间距">
+              <input type="number" value={(node.content as any)?.gap ?? 8} onChange={(e) => onContentChange({ ...(node.content || {}), gap: Number(e.target.value) })} className={numCls} />
+            </Field>
+            <Field label="照片管理">
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-[#b8b4ae]">在画布上点击照片墙可批量上传</p>
+                {((node.content as any)?.images || []).map((img: any, i: number) => (
+                  <div key={i} className="flex items-center gap-1.5 border border-[#e8e4de] rounded p-1">
+                    <img src={img.src || img} alt="" style={{ width: 32, height: 32, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                    <input
+                      value={img.caption || ''}
+                      onChange={(e) => { const images = [...(node.content as any).images]; images[i] = { ...img, caption: e.target.value }; onContentChange({ ...(node.content || {}), images }); }}
+                      className={inputCls}
+                      placeholder="说明文字"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { const images = [...(node.content as any).images]; images.splice(i, 1); onContentChange({ ...(node.content || {}), images }); }}
+                      className="text-[10px] text-red-500 hover:text-red-700 flex-shrink-0"
+                    >
+                      删除
+                    </button>
+                  </div>
+                ))}
+                {((node.content as any)?.images || []).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onContentChange({ ...(node.content || {}), images: [] })}
+                    className="w-full py-1 text-[10px] text-red-500 hover:text-red-700 border border-red-200 rounded"
+                  >
+                    清空所有照片
+                  </button>
+                )}
+              </div>
+            </Field>
+          </Section>
+        )}
+
         {node.type === 'timeline' && (
           <Section title="时间轴设置">
             <Field label="时间轴项">

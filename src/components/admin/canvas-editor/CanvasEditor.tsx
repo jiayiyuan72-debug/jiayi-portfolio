@@ -166,7 +166,10 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
   const pastRef = useRef<CanvasNode[][]>([]);
   const futureRef = useRef<CanvasNode[][]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const multiFileRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<string | null>(null);
+  const [multiUploadTarget, setMultiUploadTarget] = useState<string | null>(null);
+  const [multiUploadProgress, setMultiUploadProgress] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [canvasSaving, setCanvasSaving] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -425,6 +428,41 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     finally { setUploadTarget(null); if (fileRef.current) fileRef.current.value = ''; }
   };
 
+  // ---- Multi-file upload for photo-wall ----
+  const pickMultiImage = (id: string) => { setMultiUploadTarget(id); multiFileRef.current?.click(); };
+  const handleMultiFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []); if (!files.length || !multiUploadTarget) return;
+    const target = multiUploadTarget;
+    try {
+      const uploaded: { src: string; caption: string }[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setMultiUploadProgress(`上传中 ${i + 1}/${files.length}...`);
+        let blob: Blob = file;
+        if (file.type.startsWith('image/') && file.size > 1.5 * 1024 * 1024) {
+          const b = await compressFile(file);
+          if (b && b.size > 0 && b.size < file.size) blob = b;
+        }
+        const fd = new FormData(); fd.append('file', blob, blob === file ? file.name : 'image.jpg');
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '上传失败');
+        uploaded.push({ src: data.url, caption: '' });
+      }
+      const cur = findNode(trees, target);
+      if (cur) {
+        const existing = (cur.content as any)?.images || [];
+        updateContent(target, { images: [...existing, ...uploaded] });
+      }
+      toast.success(`成功上传 ${uploaded.length} 张照片`);
+    } catch (err: any) { toast.error(err.message || '上传失败'); }
+    finally {
+      setMultiUploadTarget(null);
+      setMultiUploadProgress(null);
+      if (multiFileRef.current) multiFileRef.current.value = '';
+    }
+  };
+
   // ---- Keyboard shortcuts ----
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -478,6 +516,7 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
     onMoveOrder: moveOrder,
     onPickImage: pickImage,
     onPickGallery: pickImage,
+    onPickPhotoWall: pickMultiImage,
     onResize: onResizeNode,
     onDropOnNode: onDropOnNode,
     onMoveNode: onMoveNode,
@@ -600,6 +639,12 @@ export default function CanvasEditor({ trees: initialTrees, onSave, sectionName,
       </div>
 
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      <input ref={multiFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleMultiFileChange} />
+      {multiUploadProgress && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#2d2a24] text-white text-xs px-4 py-2 rounded-lg shadow-lg">
+          {multiUploadProgress}
+        </div>
+      )}
     </div>
   );
 }

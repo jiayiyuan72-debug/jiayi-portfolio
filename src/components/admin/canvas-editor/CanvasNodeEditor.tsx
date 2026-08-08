@@ -16,6 +16,7 @@ interface NodeCallbacks {
   onMoveOrder: (id: string, dir: -1 | 1) => void;
   onPickImage: (id: string) => void;
   onPickGallery: (id: string) => void;
+  onPickPhotoWall: (id: string) => void;
   onResize: (id: string, patch: { width?: string; height?: string; flexBasis?: string }) => void;
   onAddChild: (parentId: string, type: CanvasType) => void;
   onQuickAddImage: (parentId: string) => void;
@@ -38,7 +39,7 @@ const EDITABLE_TYPES = ['text', 'quote'];
 
 /** Single canvas node: recursive render with proper child selection */
 export default function CanvasNodeEditor(props: Props) {
-  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onResize, onAddChild, onQuickAddImage, onDropOnNode, onMoveNode, onInsertBefore, flexParentId, flexParentBasis } = props;
+  const { node, selectedId, editingId, depth, preview, onSelectId, onEditId, onStopEdit, onUpdateContent, onDuplicate, onDelete, onMoveOrder, onPickImage, onPickGallery, onPickPhotoWall, onResize, onAddChild, onQuickAddImage, onDropOnNode, onMoveNode, onInsertBefore, flexParentId, flexParentBasis } = props;
 
   const p = node.props || {};
   const isEditable = EDITABLE_TYPES.includes(node.type);
@@ -373,6 +374,7 @@ export default function CanvasNodeEditor(props: Props) {
     onMoveOrder,
     onPickImage,
     onPickGallery,
+    onPickPhotoWall,
     onResize,
     onAddChild,
     onQuickAddImage,
@@ -785,6 +787,29 @@ function AccordionPreview({ node }: { node: CanvasNode }) {
         </details>
       ))}
       {panels.length === 0 && <div className="text-xs text-[#b8b4ae] py-4 text-center">在属性面板中添加面板项</div>}
+    </div>
+  );
+}
+
+/** Photo wall editor preview */
+function PhotoWallPreview({ node, onPickPhotoWall }: { node: CanvasNode; onPickPhotoWall: (id: string) => void }) {
+  const c = node.content as any;
+  const imgs = c?.images || [];
+  const cols = c?.columns || 3;
+  const gap = c?.gap ?? 8;
+  if (imgs.length === 0) {
+    return <div className="text-xs text-[#b8b4ae] py-6 text-center cursor-pointer" onClick={(e) => { e.stopPropagation(); onPickPhotoWall(node.id); }}>点击上传照片（支持多选）</div>;
+  }
+  return (
+    <div>
+      <div style={{ columnCount: cols, columnGap: gap + 'px' }}>
+        {imgs.map((img: any, i: number) => (
+          <div key={i} style={{ breakInside: 'avoid', marginBottom: gap + 'px', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
+            <img src={img.src || img} alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
+          </div>
+        ))}
+      </div>
+      <div className="text-[10px] text-[#b8b4ae] text-center mt-2">{imgs.length} 张照片 | 点击属性面板上传更多</div>
     </div>
   );
 }

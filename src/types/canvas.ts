@@ -4,7 +4,7 @@
 export type CanvasType =
   | 'section' | 'row' | 'column' | 'card'
   | 'text' | 'image' | 'quote' | 'divider' | 'spacer' | 'gallery'
-  | 'timeline' | 'skill-bar' | 'stats' | 'tags' | 'video' | 'accordion';
+  | 'timeline' | 'skill-bar' | 'stats' | 'tags' | 'video' | 'accordion' | 'photo-wall';
 
 export interface CanvasProps {
   width?: string;        // '100%' | '320px' ...
@@ -68,6 +68,7 @@ export const CANVAS_TYPE_LABELS: Record<CanvasType, { label: string; icon: strin
   tags: { label: '标签', icon: '🏷️' },
   video: { label: '视频', icon: '🎬' },
   accordion: { label: '折叠面板', icon: '📁' },
+  'photo-wall': { label: '照片墙', icon: '🖼️' },
 };
 
 // 布局容器（可含子）
@@ -75,10 +76,10 @@ export const LAYOUT_TYPES: CanvasType[] = ['section', 'row', 'column', 'card'];
 
 // 嵌套规则（section 六）：每种容器可以作为子放入哪些类型
 export const CAN_NEST_IN: Record<CanvasType, CanvasType[]> = {
-  section: ['row', 'column', 'card', 'text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion'],
+  section: ['row', 'column', 'card', 'text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall'],
   row: ['column'],
-  column: ['card', 'text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion'],
-  card: ['text', 'image', 'quote', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion'],
+  column: ['card', 'text', 'image', 'quote', 'divider', 'spacer', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall'],
+  card: ['text', 'image', 'quote', 'gallery', 'timeline', 'skill-bar', 'stats', 'tags', 'video', 'accordion', 'photo-wall'],
   text: [],
   image: [],
   quote: [],
@@ -91,6 +92,7 @@ export const CAN_NEST_IN: Record<CanvasType, CanvasType[]> = {
   tags: [],
   video: [],
   accordion: [],
+  'photo-wall': [],
 };
 
 export const MAX_DEPTH = 3;
@@ -148,6 +150,8 @@ export function defaultCanvasNode(type: CanvasType): CanvasNode {
         { title: '问题二', content: '点击查看详细回答内容' },
         { title: '问题三', content: '点击查看详细回答内容' },
       ] }, children: [] };
+    case 'photo-wall':
+      return { id, type, props: { ...baseProps, borderRadius: 8 }, content: { images: [], columns: 3, gap: 8 }, children: [] };
   }
 }
 

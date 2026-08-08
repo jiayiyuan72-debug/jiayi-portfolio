@@ -1,4 +1,5 @@
 import { CanvasNode } from '@/types/canvas';
+import PhotoWallClient from './PhotoWallClient';
 
 interface Props {
   nodes: CanvasNode[];
@@ -262,6 +263,18 @@ function LeafRenderer({ node, style }: { node: CanvasNode; style: React.CSSPrope
               </div>
             </details>
           ))}
+        </div>
+      );
+    }
+    case 'photo-wall': {
+      const c = node.content as any;
+      const imgs = c?.images || [];
+      const cols = c?.columns || 3;
+      const gap = c?.gap ?? 8;
+      if (imgs.length === 0) return <div style={{ ...style, minHeight: 80, background: '#f5f5f0', borderRadius: node.props?.borderRadius || 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8b4ae', fontSize: 13 }} />;
+      return (
+        <div style={style}>
+          <PhotoWallClient images={imgs} columns={cols} gap={gap} borderRadius={node.props?.borderRadius || 8} />
         </div>
       );
     }
